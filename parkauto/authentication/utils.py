@@ -123,3 +123,20 @@ def send_account_updated_email(user):
 
     from_email = from_email_send
     send_mail(subject, '', from_email, [user.email], fail_silently=False, html_message=html_message)
+    
+def validate_profile_picture(image):
+    """
+    Valide l'image de profil.
+    Vérifie la taille maximale (2 Mo) et le type MIME (doit être une image).
+    :param image: Fichier image à valider.
+    :raises Exception: Si l'image est trop volumineuse ou de type incorrect.
+    :return: L'image validée.
+    """
+    # Taille max 2 Mo
+    if image.size > 2 * 1024 * 1024:
+        raise Exception("Image trop volumineuse (>2 Mo).")
+    # Type mime
+    if hasattr(image, 'content_type') and not image.content_type.startswith("image/"):
+        raise Exception("Le fichier doit être une image.")
+    # Optionnel: résolution minimale/maximale, format autorisé
+    return image

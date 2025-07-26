@@ -24,8 +24,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from parking.views import ParkingSlotViewSet, ReservationTicketViewSet, ReservationViewSet, VehicleViewSet
 from django.urls import path
 from authentication.views import (
-    ActivateAccountView, AdminUserView, CurrentUserView, CustomTokenRefreshView, DeleteOwnAccountView, PasswordResetConfirmView, PasswordResetRequestView, ProfilePictureUploadView, RegisterView, LoginView, LogoutView,
-    ProfileView, ChangePasswordView
+    ActivateAccountView, AdminUserView, CurrentUserView, CustomTokenRefreshView, PasswordResetConfirmView, PasswordResetRequestView, RegisterView, LoginView, LogoutView,
+    UserProfileViewSet
 )
 from django.conf.urls.static import static
 
@@ -38,6 +38,7 @@ router.register('reservations', ReservationViewSet, basename='reservation')
 router.register('reservation-tickets', ReservationTicketViewSet,
                 basename='reservation-ticket')
 router.register('users', AdminUserView, basename='users')
+router.register('profile', UserProfileViewSet, basename='profile')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -51,12 +52,7 @@ urlpatterns = [
     path("api/register/", RegisterView.as_view(), name="register"),
     path("api/login/", LoginView.as_view(), name="login"),
     path("api/logout/", LogoutView.as_view(), name="logout"),
-    path("api/profile/", ProfileView.as_view(), name="profile"),
-    path("api/change-password/", ChangePasswordView.as_view(),
-         name="change-password"),
     path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
-    path('profile/upload-photo/', ProfilePictureUploadView.as_view(), name='profile-photo-upload'),
-    path('api/delete-account/', DeleteOwnAccountView.as_view(), name='delete-account'),
     path('api/activate/', ActivateAccountView.as_view(), name='activate'),
     path('api/password-reset-request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('api/password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),

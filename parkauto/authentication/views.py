@@ -17,7 +17,13 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authentication.models import ActivationCode, PasswordResetToken
+from authentication.throttles import AccountDeleteThrottle, PasswordChangeThrottle, ProfilePhotoUploadThrottle
 from authentication.utils import generate_activation_code, send_account_activated_email, send_account_updated_email, send_confirmation_reset_password_email, send_password_change_email, send_reset_email
+
+
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from rest_framework import mixins, viewsets
+from rest_framework.decorators import action, throttle_classes
 
 from .serializers import (
     AccountDeleteSerializer, ActivationSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer, ProfilePictureSerializer, RegisterSerializer, MyTokenObtainPairSerializer,
@@ -115,54 +121,6 @@ class CustomTokenRefreshView(TokenRefreshView):
             "[Token Refresh] Access token refreshed and new refresh cookie set")
 
         return response
-
-
-# @extend_schema(
-#     tags=["Auth"],
-#     methods=["GET"],
-#     summary="Get CSRF token",
-#     description=(
-#         "Retrieve a CSRF token to be used in subsequent unsafe HTTP requests (POST, PUT, DELETE).\n"
-#         "This endpoint returns the CSRF token in the response body as well as in a cookie accessible to JavaScript.\n"
-#         "Call this endpoint before making requests that require CSRF protection."
-#     ),
-#     responses={
-#         200: OpenApiResponse(description="CSRF token set successfully and returned in response."),
-#     },
-#     auth=[]
-# )
-# class GetCSRFToken(APIView):
-#     """
-#     Retrieve a CSRF token for client-side usage.
-
-#     This endpoint returns a CSRF token:
-#     - In the response body (`csrfToken` key).
-#     - As a cookie accessible to JavaScript (non-HttpOnly).
-
-#     Call this endpoint before making unsafe HTTP requests (e.g., POST, PUT, DELETE).
-#     Returns:
-#         200 OK: CSRF token successfully generated and returned.
-#         500 Internal Server Error: If there is an issue generating the CSRF token.
-#     """
-
-#     permission_classes = [permissions.AllowAny]
-
-#     def get(self, request, *args, **kwargs):
-#         csrf_token = get_token(request)
-#         response = Response({'csrfToken': csrf_token},
-#                             status=status.HTTP_200_OK)
-
-#         response.set_cookie(
-#             key='csrftoken',
-#             value=csrf_token,
-#             max_age=3600,
-#             httponly=False,
-#             samesite='Lax',  # ou 'Strict' selon besoin
-#             secure=False,    # True en prod HTTPS, False en dev HTTP
-#         )
-#         logger.info("[CSRF] CSRF token generated and returned.")
-#         return response
-
 
 @extend_schema(
     tags=["Auth"],
@@ -403,131 +361,6 @@ class LogoutView(APIView):
         except Exception as e:
             logger.error(f"LogoutView error: {e}")
             return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@extend_schema(
-    tags=["Auth"],
-    methods=["PUT"],
-    summary="Retrieve or update user profile",
-    description="Allows authenticated users to retrieve or update their profile information.",
-    request=ProfileSerializer,
-    responses={
-        200: ProfileSerializer,
-        400: OpenApiResponse(description="Validation error."),
-        401: OpenApiResponse(description="Authentication required."),
-        500: OpenApiResponse(description="Internal server error.")
-    }
-)
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class ProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def put(self, request):
-        serializer = ProfileSerializer(
-            request.user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            logger.info(
-                f"[Profile Update] User {request.user.email} updated their profile.")
-            send_account_updated_email(request.user)
-            return Response({"message": "Profile updated successfully."}, status=status.HTTP_200_OK)
-        logger.warning(
-            f"[Profile Update] Validation errors: {serializer.errors}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@extend_schema(
-    tags=["Auth"],
-    summary="Change the password of the authenticated user",
-    description=(
-        "Allows an authenticated user to change their password by providing their current password, "
-        "a new password, and a confirmation of the new password.\n\n"
-        "The new password must comply with the following security rules:\n"
-        "- Minimum of 8 characters\n"
-        "- At least one uppercase letter\n"
-        "- At least one lowercase letter\n"
-        "- At least one digit\n"
-        "- At least one special character\n\n"
-        "**Possible responses:**\n"
-        "- `200 OK`: Password changed successfully\n"
-        "- `400 Bad Request`: Validation error (e.g., password mismatch, wrong current password...)\n"
-        "- `403 Forbidden`: Unauthorized (missing or invalid token)\n"
-        "- `500 Internal Server Error`: Unexpected server error"
-    ),
-    request=ChangePasswordSerializer,
-    responses={
-        200: OpenApiResponse(description="Password changed successfully."),
-        400: OpenApiResponse(description="Validation error."),
-        403: OpenApiResponse(description="Unauthorized."),
-        500: OpenApiResponse(description="Internal server error."),
-    },
-)
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class ChangePasswordView(APIView):
-    """
-    ChangePasswordView
-
-    Handle password change for the currently authenticated user.
-
-    This endpoint allows an authenticated user to change their password
-    by providing the current password, a new password, and its confirmation.
-    The new password must meet the following security criteria:
-
-    - At least 8 characters
-    - At least one uppercase letter
-    - At least one lowercase letter
-    - At least one digit
-    - At least one special character
-    - Must not contain whitespace
-
-    Methods:
-        POST: Validate and update the user's password.
-
-    Permissions:
-        - User must be authenticated.
-
-    Request body:
-        {
-            "old_password": "CurrentPassword123!",
-            "new_password": "NewPassword!1",
-            "new_password_confirm": "NewPassword!1"
-        }
-
-    Responses:
-        200 OK:
-            {
-                "detail": "Password successfully changed."
-            }
-
-        400 Bad Request:
-            {
-                "non_field_errors": [...],  # Validation issues (e.g., mismatch, weak password)
-                "old_password": [...],      # Incorrect current password
-                "new_password": [...],      # Invalid format
-            }
-
-        403 Forbidden:
-            {
-                "detail": "Authentication credentials were not provided."
-            }
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = ChangePasswordSerializer(
-            data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            logger.info(
-                f"[ChangePassword] Password changed for user: {request.user.email}")
-            send_password_change_email(request.user)
-            return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
-
-        logger.warning(
-            f"[ChangePassword] Validation errors: {serializer.errors}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @extend_schema(
     tags=["Auth"],
@@ -796,67 +629,6 @@ class PasswordResetConfirmView(APIView):
                 f"[PasswordResetConfirm] Validation errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class DeleteOwnAccountView(APIView):
-    """
-    API endpoint that allows an authenticated user to permanently delete their own account.
-
-    The deletion is **irreversible** and requires confirmation via a `passphrase` 
-    (typically the user's current password) to prevent accidental or unauthorized deletions.
-
-    Permissions:
-        - Must be authenticated (IsAuthenticated)
-
-    Request body:
-        {
-            "passphrase": "your_current_password"
-        }
-
-    Responses:
-        - 204 No Content: Account successfully deleted.
-        - 400 Bad Request: Invalid or missing passphrase.
-        - 401 Unauthorized: Authentication credentials not provided or invalid.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Auth"],
-        methods=["POST"],
-        summary="Delete own account",
-        description=(
-            "Allows the currently authenticated user to permanently delete their account.\n\n"
-            "⚠️ Requires the current password as a passphrase for security.\n\n"
-            "**Expected payload:**\n"
-            "```json\n"
-            "{ \"passphrase\": \"current_password\" }\n"
-            "```\n\n"
-            "**Possible responses:**\n"
-            "- `204 No Content`: Account successfully deleted.\n"
-            "- `400 Bad Request`: Invalid or missing passphrase.\n"
-            "- `401 Unauthorized`: Authentication credentials were not provided or invalid."
-        ),
-        request=AccountDeleteSerializer,
-        responses={
-            204: OpenApiResponse(description="Account successfully deleted."),
-            400: OpenApiResponse(description="Invalid passphrase or input."),
-        },
-    )
-    def post(self, request):
-        serializer = AccountDeleteSerializer(
-            data=request.data, context={'request': request})
-        if serializer.is_valid():
-            user = request.user
-            user.delete()
-            logger.info(
-                f"[DeleteAccount] User {user.email} deleted their account.")
-            return Response({'detail': 'Account successfully deleted.'}, status=status.HTTP_204_NO_CONTENT)
-        logger.warning(
-            f"[DeleteAccount] Validation errors: {serializer.errors}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @extend_schema(
     tags=["Admin"],
     summary="Admin: Manage user accounts",
@@ -946,45 +718,105 @@ class AdminUserView(ModelViewSet):
             f"[AdminUserView] Retrieving user: {kwargs.get('pk', 'Unknown')}")
         return super().retrieve(request, *args, **kwargs)
 
-
 @extend_schema(
-    tags=["Profile"],
-    summary="Upload user profile picture",
-    description=(
-        "Allows an authenticated user to upload or update their profile picture.\n\n"
-        "The image file must be sent as a multipart/form-data request with the key `profile_picture`."
-    ),
-    request=ProfilePictureSerializer,
-    responses={
-        200: OpenApiResponse(description="Profile picture updated successfully."),
-        400: OpenApiResponse(description="Invalid image file or request data."),
-        401: OpenApiResponse(description="Authentication credentials were not provided."),
-    },
+    tags=["User Profile"]
 )
 @method_decorator(ensure_csrf_cookie, name='dispatch')
-class ProfilePictureUploadView(APIView):
-    """
-    Upload or update the authenticated user's profile picture.
-
-    Requires the user to be authenticated.
-
-    Request:
-        - Multipart/form-data with key `profile_picture` containing the image file.
-
-    Responses:
-        - 200 OK:
-            {
-                "detail": "Profile picture updated successfully."
-            }
-        - 400 Bad Request: Validation errors (e.g., invalid image format).
-        - 401 Unauthorized: If authentication credentials are missing or invalid.
-    """
-
+class UserProfileViewSet(
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
+    serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def get_object(self):
+        return self.request.user
+
+    @extend_schema(
+        summary="Lire le profil de l'utilisateur connecté",
+        description="Retourne toutes les informations du profil de l'utilisateur authentifié.",
+        responses={200: ProfileSerializer, 401: OpenApiResponse(description="Authentification requise")}
+    )
+    def retrieve(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object())
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Modifier le profil",
+        description="Permet de modifier partiellement les informations du profil utilisateur. Un email de notification est envoyé après modification.",
+        request=ProfileSerializer,
+        responses={
+            200: OpenApiResponse(description="Profil mis à jour"),
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(description="Authentification requise")
+        }
+    )
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        send_account_updated_email(user, settings.FRONTEND_URL)
+        return Response({"message": "Profile updated successfully."})
+
+    @extend_schema(
+        summary="Supprimer le compte utilisateur",
+        description="Supprime le compte de l'utilisateur après confirmation via passphrase.",
+        request=AccountDeleteSerializer,
+        responses={
+            200: OpenApiResponse(description="Compte supprimé"),
+            400: OpenApiResponse(description="Erreur de validation"),
+            401: OpenApiResponse(description="Authentification requise")
+        }
+    )
+    @throttle_classes([AccountDeleteThrottle])
+    def destroy(self, request, *args, **kwargs):
+        serializer = AccountDeleteSerializer(
+            data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        self.get_object().delete()
+        return Response({"message": "Account deleted successfully."})
+
+    @extend_schema(
+        summary="Changer le mot de passe",
+        description="Permet à l'utilisateur authentifié de changer son mot de passe. Un email de notification est envoyé après changement.",
+        request=ChangePasswordSerializer,
+        responses={
+            200: OpenApiResponse(description="Mot de passe changé"),
+            400: OpenApiResponse(description="Erreur de validation"),
+            401: OpenApiResponse(description="Authentification requise")
+        }
+    )
+    @action(detail=False, methods=["post"], url_path="change-password")
+    @throttle_classes([PasswordChangeThrottle])
+    def change_password(self, request):
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        send_password_change_email(self.get_object())
+        return Response({"message": "Password changed successfully."})
+
+    @extend_schema(
+        summary="Uploader la photo de profil",
+        description="Permet d'uploader une nouvelle photo de profil.",
+        request=ProfilePictureSerializer,
+        responses={
+            200: OpenApiResponse(description="Photo de profil uploadée"),
+            400: OpenApiResponse(description="Erreur de validation"),
+            401: OpenApiResponse(description="Authentification requise")
+        }
+    )
+    @action(detail=False, methods=["post"], url_path="upload-photo")
+    @throttle_classes([ProfilePhotoUploadThrottle])
+    def upload_photo(self, request):
         serializer = ProfilePictureSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.update(request.user, serializer.validated_data)
-            return Response({"detail": "Profile picture updated successfully."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        user = self.get_object()
+        if user.profile_picture:
+            user.profile_picture.delete(save=False)
+        user.profile_picture = serializer.validated_data["profile_picture"]
+        user.save()
+        return Response({"message": "Profile picture uploaded successfully."})

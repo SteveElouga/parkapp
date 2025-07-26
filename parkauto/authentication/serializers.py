@@ -7,8 +7,9 @@ from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import RegexValidator
 
-User = get_user_model()
+from authentication.utils import validate_profile_picture
 
+User = get_user_model()
 password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])([^\s]{8,})$'
 
 
@@ -69,87 +70,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
-
-
-class ProfileSerializer(serializers.ModelSerializer):
-    """
-    Serializer for retrieving and updating the authenticated user's profile.
-
-    Fields:
-        - id: User ID (read-only).
-        - email: Email (read-only).
-        - username, first_name, last_name, etc.: Editable profile information.
-    """
-
-    class Meta:
-        model = User
-        fields = [
-            'id', 'email', 'username', 'first_name', 'last_name',
-            'role', 'phone_number', 'address', 'city',
-            'country', 'profile_picture', 'date_of_birth'
-        ]
-        read_only_fields = ['id', 'email']
-
-
-class ChangePasswordSerializer(serializers.Serializer):
-    """
-    Serializer to handle user password changes securely.
-
-    Validates:
-        - Old password matches the current user password.
-        - New password meets complexity rules.
-        - New password and confirmation match.
-
-    Fields:
-        - old_password: Current password of the user.
-        - new_password: New desired password (write-only).
-        - confirm_new_password: Confirmation of the new password.
-    """
-
-    old_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(
-        write_only=True, validators=[validate_password])
-    confirm_new_password = serializers.CharField(write_only=True)
-
-    def validate_old_password(self, value):
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Old password incorrect.")
-        return value
-
-    def validate_new_password(self, value):
-        if not re.match(password_regex, value):
-            raise serializers.ValidationError(
-                "The password must contain at least 8 characters, "
-                "including one lowercase, one uppercase, one number, one special character, "
-                "and must not contain spaces."
-            )
-        password_validation.validate_password(value)
-        return value
-
-    def validate(self, attrs):
-        if attrs['new_password'] != attrs['confirm_new_password']:
-            raise serializers.ValidationError({
-                "confirm_new_password": "The passwords do not match."
-            })
-        return attrs
-
-    def save(self, **kwargs):
-        user = self.context['request'].user
-        user.set_password(self.validated_data['new_password'])
-        user.save()
-
-        # Invalider les anciens tokens si nécessaire
-        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-        tokens = OutstandingToken.objects.filter(user=user)
-        for token in tokens:
-            try:
-                BlacklistedToken.objects.get_or_create(token=token)
-            except Exception:
-                continue
-
-        return user
-
 
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -270,42 +190,161 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             })
         return data
 
+class ProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for displaying and updating user profile.
+
+    - Shows all profile fields, including profile picture (read-only).
+    - Allows partial update of personal information.
+    - The 'profile_picture' field is read-only and can only be updated via a dedicated action.
+    - Validates phone number format.
+    """
+
+    profile_picture = serializers.ImageField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'role', 'phone_number', 'address', 'city',
+            'country', 'profile_picture', 'date_of_birth'
+        ]
+        read_only_fields = ['id', 'email', 'profile_picture']
+
+    def validate_phone_number(self, value):
+        """
+        Verifies the format of the phone number (should be international format +XXXXXXXXXXX).
+        """
+        if value and not re.match(r'^\+?\d{7,15}$', value):
+            raise serializers.ValidationError("Invalid phone number format.")
+        return value
+
+    def update(self, instance, validated_data):
+        """
+        Updates user profile fields except profile picture.
+        """
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Serializer for secure password change.
+
+    - Checks the old password.
+    - Enforces strong validation of the new password (complexity, uniqueness, etc.).
+    - Checks matching of new password and its confirmation.
+    - Blacklists previous JWT tokens after change.
+    """
+    old_password = serializers.CharField(
+        write_only=True,
+        help_text="User's current password."
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        help_text="New password, must meet security constraints.",
+        validators=[
+            RegexValidator(
+                regex=password_regex,
+                message="Password must include at least one uppercase letter, one lowercase letter, one digit, one special character, and must not contain spaces."
+            ),
+            password_validation.validate_password
+        ]
+    )
+    confirm_new_password = serializers.CharField(
+        write_only=True,
+        help_text="Confirmation of the new password."
+    )
+
+    def validate_old_password(self, value):
+        """
+        Checks that the provided old password is correct.
+        """
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Old password is incorrect.")
+        return value
+
+    def validate(self, attrs):
+        """
+        Checks that new passwords match and are different from the old password.
+        """
+        if attrs['new_password'] != attrs['confirm_new_password']:
+            raise serializers.ValidationError({
+                "confirm_new_password": "Passwords do not match."
+            })
+        if attrs['old_password'] == attrs['new_password']:
+            raise serializers.ValidationError({
+                "new_password": "New password must be different from the old password."
+            })
+        return attrs
+
+    def save(self, **kwargs):
+        """
+        Updates the user's password and blacklists all previous JWT tokens.
+        """
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+        tokens = OutstandingToken.objects.filter(user=user)
+        for token in tokens:
+            try:
+                BlacklistedToken.objects.get_or_create(token=token)
+            except Exception:
+                continue
+        return user
 
 class AccountDeleteSerializer(serializers.Serializer):
     """
-    Serializer for confirming account deletion by the authenticated user.
+    Serializer for user account deletion.
 
-    Fields:
-        - passphrase: Required to confirm account deletion. Must be in the form `<email>_delete`.
+    - Checks the passphrase (format: <email>_delete) as strong confirmation.
+    - Can be extended with password check.
     """
-
-    passphrase = serializers.CharField(write_only=True)
+    passphrase = serializers.CharField(
+        write_only=True,
+        help_text="Confirmation phrase (<email>_delete) required to delete the account."
+    )
 
     def validate_passphrase(self, value):
+        """
+        Checks that the entered passphrase matches the expected one.
+        """
         user = self.context['request'].user
-        if not (value == f'{user.email}_delete'):
+        expected = f"{user.email}_delete"
+        if value != expected:
             raise serializers.ValidationError("Incorrect passphrase.")
         return value
 
-
 class ProfilePictureSerializer(serializers.Serializer):
     """
-    Serializer for uploading or updating a user's profile picture.
+    Serializer for uploading user profile picture.
 
-    Fields:
-        - profile_picture (ImageField): The image file to set as the user's profile picture.
-
-    Methods:
-        - update(instance, validated_data): Updates the `profile_picture` field of the given user instance
-          with the validated image file and saves the instance.
-
-    Usage:
-        Used to validate and save a new profile picture uploaded by the user.
+    - Validates maximum size (2MB) and MIME type (must be an image).
+    - Can be extended with resolution or format constraints.
     """
+    profile_picture = serializers.ImageField(
+        help_text="Image file for profile picture (max 2MB)."
+    )
 
+    def validate_profile_picture(self, value):
+        """
+        Validates the size and type of the image file.
+        """
+        return validate_profile_picture(value)
+    """
+    Serializer pour l'upload de la photo de profil utilisateur.
+
+    - Valide la taille maximale (2 Mo) et le type MIME (doit être une image).
+    - Peut être enrichi avec des contraintes de résolution ou de format.
+    """
     profile_picture = serializers.ImageField()
 
-    def update(self, instance, validated_data):
-        instance.profile_picture = validated_data.get('profile_picture')
-        instance.save()
-        return instance
+    def validate_profile_picture(self, value):
+        """
+        Valide la taille et le type du fichier image.
+        """
+        return validate_profile_picture(value)

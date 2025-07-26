@@ -245,3 +245,34 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880 
+
+# Throttle settings
+
+if DEBUG:
+    REST_FRAMEWORK = {
+        'DEFAULT_THROTTLE_CLASSES': [
+            'rest_framework.throttling.UserRateThrottle',
+            'rest_framework.throttling.AnonRateThrottle',
+        ],
+        'DEFAULT_THROTTLE_RATES': {
+            'user': '1000/day',
+            'anon': '100/day',
+            'password_change': '3/hour',
+            'account_delete': '1/day',
+            'profile_photo_upload': '5/day',
+        }
+    }
+else:  # dev or staging
+    REST_FRAMEWORK = {
+        'DEFAULT_THROTTLE_CLASSES': [
+            'rest_framework.throttling.UserRateThrottle',
+            'rest_framework.throttling.AnonRateThrottle',
+        ],
+        'DEFAULT_THROTTLE_RATES': {
+            'user': '10000/day',
+            'anon': '1000/day',
+            'password_change': '20/hour',
+            'account_delete': '5/day',
+            'profile_photo_upload': '50/day',
+        }
+    }
