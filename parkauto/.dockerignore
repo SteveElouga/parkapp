@@ -1,0 +1,34 @@
+# .dockerignore for a Django project (API de parking auto)
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+*.egg
+dist/
+build/
+.env
+.env.*
+db.sqlite3
+db.sqlite3-journal
+*.log
+*.sqlite3
+
+# Django static and media files (if handled outside container)
+staticfiles/
+static/
+media/
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Node modules (if frontend present)
+node_modules/
