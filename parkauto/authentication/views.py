@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter, OpenApiTypes, inline_serializer
 from django.db import transaction
 
 from django.utils.decorators import method_decorator
@@ -19,6 +19,9 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from authentication.models import ActivationCode, PasswordResetToken
 from authentication.throttles import AccountDeleteThrottle, ActivationThrottle, LoginThrottle, PasswordChangeThrottle, PasswordResetRequestThrottle, ProfilePhotoUploadThrottle, RegisterThrottle
 from authentication.utils import generate_activation_code, send_account_activated_email, send_account_updated_email, send_confirmation_reset_password_email, send_password_change_email, send_reset_email
+from google.oauth2 import id_token
+from google.auth.transport import requests
+import requests  # Add this import for HTTP requests
 
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
@@ -31,6 +34,7 @@ from .serializers import (
     AccountDeleteSerializer, ActivationSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer, ProfilePictureSerializer, RegisterSerializer, MyTokenObtainPairSerializer,
     ProfileSerializer, ChangePasswordSerializer, UserSerializer
 )
+from rest_framework import serializers
 
 User = get_user_model()
 
@@ -169,6 +173,240 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 
 @extend_schema(
+    tags=['Auth'],
+    summary='Authenticate or register user via GitHub SSO',
+    description="""Authentifie ou crée un utilisateur via SSO GitHub.  
+    Le frontend envoie le code d’autorisation GitHub (OAuth2) en POST.  
+    Le backend échange ce code contre un access_token, récupère l’email GitHub, crée ou connecte l’utilisateur, et retourne des tokens JWT.""",
+    request=inline_serializer(
+        name='GithubSSOLoginRequest',
+        fields={
+            'code': serializers.CharField(help_text="Code d'autorisation GitHub")
+        }
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=inline_serializer(
+                name='GithubSSOLoginResponse',
+                fields={
+                    'refresh': serializers.CharField(help_text='JWT refresh token'),
+                    'access': serializers.CharField(help_text='JWT access token'),
+                }
+            ),
+            description='JWT tokens pour la session API'
+        ),
+        400: OpenApiResponse(
+            response=inline_serializer(
+                name='GithubSSOLoginErrorResponse',
+                fields={'error': serializers.CharField()}
+            ),
+            description='Erreur ou code GitHub invalide'
+        ),
+    }
+)
+class GithubSSOLoginView(APIView):
+    """
+    Endpoint d'authentification SSO via GitHub.
+
+    Reçoit en POST un "code" dans le corps de la requête (JSON).
+    Échange le code contre un access_token GitHub, récupère l'utilisateur, crée/connecte le user Django et retourne les tokens JWT.
+
+    - Corps attendu :
+        {
+            "code": "<code_github>"
+        }
+
+    - Réponse en cas de succès :
+        {
+            "refresh": "<jwt_refresh_token>",
+            "access": "<jwt_access_token>"
+        }
+
+    - Réponse en cas d'erreur :
+        {
+            "error": "Invalid code"
+        }
+    """
+
+    def post(self, request):
+        code = request.data.get('code')
+        if not code:
+            logger.warning("[GitHub SSO Login] No code provided")
+            return Response({'error': 'No code provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token_resp = requests.post(
+            "https://github.com/login/oauth/access_token",
+            headers={'Accept': 'application/json'},
+            data={
+                'client_id': settings.GITHUB_CLIENT_ID,
+                'client_secret': settings.GITHUB_CLIENT_SECRET,
+                'code': code,
+            }
+        )
+        token_data = token_resp.json()
+        access_token = token_data.get('access_token')
+        if not access_token:
+            logger.warning("[GitHub SSO Login] Invalid code")
+            return Response({'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Récupère infos utilisateur chez GitHub
+        user_resp = requests.get(
+            "https://api.github.com/user",
+            headers={'Authorization': f'token {access_token}'}
+        )
+        user_data = user_resp.json()
+        email = user_data.get('email')
+        # Si email non public, va le chercher explicitement
+        if not email:
+            logger.info(
+                "[GitHub SSO Login] Email not found in user data, fetching emails")
+            email_resp = requests.get(
+                "https://api.github.com/user/emails",
+                headers={'Authorization': f'token {access_token}'}
+            )
+            email_list = email_resp.json()
+            email = next((e['email']
+                         for e in email_list if e.get('primary')), None)
+            email = next((e['email']
+                         for e in email_list if e.get('primary')), None)
+
+        if not email:
+            return Response({'error': 'Unable to retrieve email from GitHub'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. Crée ou récupère l'user local
+        user, created = User.objects.get_or_create(email=email, defaults={
+            'first_name': user_data.get('name', ''),
+            'is_active': True,
+        })
+        if not user.is_active:
+            user.is_active = True
+            user.save()
+
+        refresh = RefreshToken.for_user(user)
+        access = str(refresh.access_token)
+        response = Response({
+            "message": "Login successful.",
+            'access': access,
+            'user': MyTokenObtainPairSerializer(user).data
+        }, status=status.HTTP_200_OK)
+
+        set_refresh_cookie(response, str(refresh))
+        logger.info(f"[GitHub SSO Login] Issued tokens for user {email}")
+        return response
+
+
+@extend_schema(
+    tags=["Auth"],
+    summary="Authenticate or register user via Google SSO",
+    description="""
+        Authenticates or creates a user using a Google OAuth2 token (SSO).
+        Receives an ID token from the frontend (typically Angular), verifies it with Google,
+        creates or updates the user, and returns JWT tokens for session management.
+        The user account is automatically activated upon creation via SSO.
+
+        Typical usage: the frontend obtains a Google ID token, sends it to this endpoint via POST,
+        and receives refresh/access tokens for API authentication.
+    """,
+    request=inline_serializer(
+        name='GoogleSSOLoginRequest',
+        fields={
+            'id_token': serializers.CharField(help_text='Google OAuth2 ID token obtained by the frontend')
+        }
+    ),
+    responses={
+        200: OpenApiResponse(
+            response=inline_serializer(
+                name='GoogleSSOLoginResponse',
+                fields={
+                    'refresh': serializers.CharField(help_text='JWT refresh token'),
+                    'access': serializers.CharField(help_text='JWT access token'),
+                }
+            ),
+            description='JWT tokens returned for authenticated session'
+        ),
+        400: OpenApiResponse(
+            response=inline_serializer(
+                name='GoogleSSOLoginErrorResponse',
+                fields={'error': serializers.CharField()}
+            ),
+            description='Invalid or missing token'
+        ),
+    }
+)
+class GoogleSSOLoginView(APIView):
+    """
+    API endpoint to authenticate or register a user via Google SSO (OAuth2).
+
+    This endpoint expects a POST request containing an "id_token" field,
+    which should be a Google OAuth2 ID token obtained from the frontend (e.g., Angular).
+
+    The endpoint will:
+    - Verify the ID token with Google.
+    - Retrieve user info (email, first_name, last_name) from the token.
+    - Create or update the user in the local database, setting is_active=True.
+    - Return JWT access and refresh tokens for authentication.
+
+    If the token is invalid or missing, returns HTTP 400 with an error message.
+
+    Example request:
+        POST /api/auth/google/
+        {
+            "id_token": "<google_id_token>"
+        }
+
+    Example success response:
+        {
+            "refresh": "<jwt_refresh_token>",
+            "access": "<jwt_access_token>"
+        }
+
+    Example error response:
+        {
+            "error": "Invalid token"
+        }
+    """
+
+    def post(self, request):
+        token = request.data.get('id_token')
+        if not token:
+            logger.warning("[Google SSO Login] No token provided")
+            return Response({'error': 'No token provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            idinfo = id_token.verify_oauth2_token(token, requests.Request())
+            email = idinfo['email']
+            first_name = idinfo.get('given_name', '')
+            last_name = idinfo.get('family_name', '')
+            # Si tu veux récupérer plus d'infos, adapte ici
+
+            user, created = User.objects.get_or_create(email=email, defaults={
+                'first_name': first_name,
+                'last_name': last_name,
+                'is_active': True,  # <--- Active directement le compte SSO
+            })
+            # Si le user existait déjà, assure-toi qu'il est bien actif
+            if not user.is_active:
+                user.is_active = True
+                user.save()
+
+            refresh = RefreshToken.for_user(user)
+            access = str(refresh.access_token)
+            response = Response({
+                "message": "Login successful.",
+                'access': access,
+                'user': MyTokenObtainPairSerializer(user).data
+            }, status=status.HTTP_200_OK)
+
+            set_refresh_cookie(response, str(refresh))
+            logger.info(
+                f"[Google SSO Login] User {email} {'created' if created else 'logged in'} via SSO")
+            return response
+        except ValueError:
+            logger.warning("[Google SSO Login] Invalid token")
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(
     tags=["Auth"],
     methods=["POST"],
     summary="Register a new user account via email",
@@ -251,7 +489,8 @@ class RegisterView(APIView):
         else:
             errors = serializer.errors
             if 'email' in errors and any("already exists" in msg for msg in errors['email']):
-                errors['email'] = ["Unable to create account. Contact support if the problem persists."]
+                errors['email'] = [
+                    "Unable to create account. Contact support if the problem persists."]
             logger.warning(f"[Register] Registration failed: {errors}")
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -509,6 +748,7 @@ class LogoutView(APIView):
         except Exception as e:
             logger.error(f"LogoutView error: {e}")
             return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 @throttle_classes([PasswordResetRequestThrottle])
@@ -785,9 +1025,10 @@ class AdminUserView(ModelViewSet):
     serializer_class = UserSerializer
     logger.warning(
         '[AdminUserView] Admin user management endpoint initialized.')
-    
+
     # Pagination, Filtrage et Recherche
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend,
+                       filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['email', 'is_active', 'role']
     search_fields = ['email', 'first_name', 'last_name']
     ordering_fields = ['date_joined', 'last_name', 'role']

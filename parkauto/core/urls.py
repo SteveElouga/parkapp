@@ -23,8 +23,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from parking.views import ParkingSlotViewSet, ReservationTicketViewSet, ReservationViewSet, VehicleViewSet
 from django.urls import path
 from authentication.views import (
-    ActivateAccountView, AdminUserView, CustomTokenRefreshView, PasswordResetConfirmView, PasswordResetRequestView, RegisterView, LoginView, LogoutView,
-    UserProfileViewSet
+    ActivateAccountView, AdminUserView, CustomTokenRefreshView, GoogleSSOLoginView, PasswordResetConfirmView, PasswordResetRequestView, RegisterView, LoginView, LogoutView,
+    UserProfileViewSet, GithubSSOLoginView
 )
 from django.conf.urls.static import static
 
@@ -67,6 +67,8 @@ urlpatterns = [
     path('profile/upload-photo/',
          UserProfileViewSet.as_view({'post': 'upload_photo'})),
     path('profile/delete-photo/', UserProfileViewSet.as_view({'delete': 'delete_photo'})),
+    path('auth/google/', GoogleSSOLoginView.as_view(), name='google-sso-login'),
+    path('auth/github/', GithubSSOLoginView.as_view(), name='github-sso-login'),
 ]
 
 if settings.DEBUG:
