@@ -507,47 +507,6 @@ class LogoutView(APIView):
             logger.error(f"LogoutView error: {e}")
             return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@extend_schema(
-    tags=["Auth"],
-    methods=["GET"],
-    summary="Retrieve authenticated user profile",
-    description=(
-        "Returns the profile information of the currently authenticated user.\n\n"
-        "**Possible responses:**\n"
-        "- `200 OK`: Successfully returns user data\n"
-        "- `403 Forbidden`: User not authenticated"
-    ),
-    responses={
-        200: UserSerializer,
-        403: OpenApiResponse(description="Authentication credentials were not provided or are invalid."),
-        500: OpenApiResponse(description="Internal server error.")
-    },
-)
-class CurrentUserView(APIView):
-    """
-    Get the authenticated user's basic profile data.
-
-    Returns minimal user info (usually name, email, ID, etc.)
-
-    Response:
-        - 200 OK: If the user is authenticated.
-        - 403 Forbidden: If not authenticated.
-        - 500 Internal Server Error: On unexpected error.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        try:
-            serializer = UserSerializer(request.user)
-            logger.info(
-                f"[CurrentUser] Profile requested by user: {request.user.email}")
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"CurrentUserView error: {e}")
-            return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class PasswordResetRequestView(APIView):
     """

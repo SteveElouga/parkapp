@@ -23,7 +23,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from parking.views import ParkingSlotViewSet, ReservationTicketViewSet, ReservationViewSet, VehicleViewSet
 from django.urls import path
 from authentication.views import (
-    ActivateAccountView, AdminUserView, CurrentUserView, CustomTokenRefreshView, PasswordResetConfirmView, PasswordResetRequestView, RegisterView, LoginView, LogoutView,
+    ActivateAccountView, AdminUserView, CustomTokenRefreshView, PasswordResetConfirmView, PasswordResetRequestView, RegisterView, LoginView, LogoutView,
     UserProfileViewSet
 )
 from django.conf.urls.static import static
@@ -61,7 +61,6 @@ urlpatterns = [
          PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('api/password-reset-confirm/',
          PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path("api/me/", CurrentUserView.as_view(), name="user-me"),
     path('profile/', user_profile, name='user-profile'),
     path('profile/change-password/',
          UserProfileViewSet.as_view({'post': 'change_password'})),
