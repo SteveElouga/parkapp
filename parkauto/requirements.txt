@@ -4,8 +4,10 @@ bcrypt==4.3.0
 channels==4.2.2
 channels_redis==4.3.0
 colorama==0.4.6
+coverage==7.10.0
 Django==5.2.4
 django-cors-headers==4.7.0
+django-filter==25.1
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.28.0
@@ -23,6 +25,7 @@ psycopg2-binary==2.9.10
 Pygments==2.19.2
 PyJWT==2.10.1
 pytest==8.4.1
+pytest-cov==6.2.1
 pytest-django==4.11.1
 python-decouple==3.8
 pytz==2025.2

@@ -11,3 +11,12 @@ class AccountDeleteThrottle(UserRateThrottle):
 
 class ProfilePhotoUploadThrottle(UserRateThrottle):
     scope = 'profile_photo_upload'
+
+class RegisterThrottle(UserRateThrottle):
+    scope = 'register'
+
+class ActivationThrottle(UserRateThrottle):
+    scope = 'activation'
+
+class PasswordResetRequestThrottle(UserRateThrottle):
+    scope = 'password_reset_request'

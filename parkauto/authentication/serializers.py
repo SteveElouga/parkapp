@@ -6,8 +6,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import RegexValidator
+from django.db import IntegrityError
 
-from authentication.utils import validate_profile_picture
+from authentication.utils import clean_strings, validate_profile_picture
 
 User = get_user_model()
 password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])([^\s]{8,})$'
@@ -23,7 +24,6 @@ class ActivationSerializer(serializers.Serializer):
 
     code = serializers.CharField()
 
-
 class RegisterSerializer(serializers.ModelSerializer):
     """
     Serializer for user registration.
@@ -33,7 +33,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     Fields:
         - email: Email address (required).
-        - username: Unique username.
         - password: User password (write-only, validated).
         - password_confirm: Confirmation of the password.
         - first_name, last_name, phone_number, etc.: Optional profile fields.
@@ -58,6 +57,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
+        data = clean_strings(data, ['first_name', 'last_name', 'address', 'city', 'country', 'email'])
         if data['password'] != data['password_confirm']:
             raise serializers.ValidationError(
                 {"password_confirm": "The passwords do not match."})
@@ -66,9 +66,16 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
-        user = User(**validated_data)
-        user.set_password(password)
-        user.save()
+        validated_data['email'] = validated_data['email'].strip().lower()
+        try:
+            user = User(**validated_data)
+            user.set_password(password)
+            user.save()
+        except IntegrityError:
+            # Masque l’origine réelle de l’erreur
+            raise serializers.ValidationError({
+                "email": "Unable to create account. Contact support if the problem persists."
+            })
         return user
 
 class UserSerializer(serializers.ModelSerializer):
@@ -156,6 +163,15 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
     email = serializers.EmailField()
 
+    def validate_email(self, value):
+        """
+        Vérifie que l'email est bien formaté et n'est pas déjà utilisé.
+        """
+        value = value.strip().lower()
+        if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', value):
+            raise serializers.ValidationError("Invalid email format.")
+        return value
+
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """
@@ -210,6 +226,9 @@ class ProfileSerializer(serializers.ModelSerializer):
             'country', 'profile_picture', 'date_of_birth'
         ]
         read_only_fields = ['id', 'email', 'profile_picture']
+        
+    def validate(self, attrs):
+        return clean_strings(attrs, ['first_name', 'last_name', 'address', 'city', 'country', 'email'])
 
     def validate_phone_number(self, value):
         """

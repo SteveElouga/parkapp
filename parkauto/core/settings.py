@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'authentication',
     'rest_framework_simplejwt.token_blacklist',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -62,6 +63,16 @@ MIDDLEWARE = [
     'authentication.middlewares.custom_csrf.CustomCSRFMiddleware',
 ]
 
+USER_RATE = '1000/day' if DEBUG else '10000/day'
+ANON_RATE = '100/day' if DEBUG else '1000/day'
+PASSWORD_CHANGE_RATE = '3/hour' if DEBUG else '20/hour'
+ACCOUNT_DELETE_RATE = '1/day' if DEBUG else '5/day'
+PROFILE_PHOTO_UPLOAD_RATE = '5/day' if DEBUG else '50/day'
+REGISTER_RATE = '3/hour' if DEBUG else '20/hour'
+ACTIVATION_RATE = '10/hour' if DEBUG else '100/hour'
+PASSWORD_RESET_REQUEST_RATE = '5/hour' if DEBUG else '50/hour'
+LOGIN_RATE = '10/min' if DEBUG else '100/min'
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -74,13 +85,20 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'user': '1000/day' if DEBUG else '10000/day',
-        'anon': '100/day' if DEBUG else '1000/day',
-        'password_change': '3/hour' if DEBUG else '20/hour',
-        'account_delete': '1/day' if DEBUG else '5/day',
-        'profile_photo_upload': '5/day' if DEBUG else '50/day',
-    }
+    "DEFAULT_THROTTLE_RATES": {
+        "user": USER_RATE,
+        "anon": ANON_RATE,
+        "password_change": PASSWORD_CHANGE_RATE,
+        "account_delete": ACCOUNT_DELETE_RATE,
+        "profile_photo_upload": PROFILE_PHOTO_UPLOAD_RATE,
+        "register": REGISTER_RATE,
+        "activation": ACTIVATION_RATE,
+        "password_reset_request": PASSWORD_RESET_REQUEST_RATE,
+        "login": LOGIN_RATE,
+    },
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 # CORS settings

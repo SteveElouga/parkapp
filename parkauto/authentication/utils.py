@@ -7,6 +7,15 @@ from_email_send = config('DEFAULT_FROM_EMAIL', default='noreply@tonsite.com')
 def generate_activation_code(length=6):
     return ''.join(random.choices('0123456789', k=length))
 
+def clean_strings(data, fields):
+    """
+    Nettoie les champs string en enlevant les espaces au début/fin.
+    Peut être utilisé dans n'importe quel serializer.
+    """
+    for field in fields:
+        if field in data and isinstance(data[field], str):
+            data[field] = data[field].strip()
+    return data
 
 def send_reset_email(user, reset_link):
     subject = "Your password reset request"

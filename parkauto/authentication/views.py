@@ -17,13 +17,15 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from authentication.models import ActivationCode, PasswordResetToken
-from authentication.throttles import AccountDeleteThrottle, LoginThrottle, PasswordChangeThrottle, ProfilePhotoUploadThrottle
+from authentication.throttles import AccountDeleteThrottle, ActivationThrottle, LoginThrottle, PasswordChangeThrottle, PasswordResetRequestThrottle, ProfilePhotoUploadThrottle, RegisterThrottle
 from authentication.utils import generate_activation_code, send_account_activated_email, send_account_updated_email, send_confirmation_reset_password_email, send_password_change_email, send_reset_email
 
 
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action, throttle_classes
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 
 from .serializers import (
     AccountDeleteSerializer, ActivationSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer, ProfilePictureSerializer, RegisterSerializer, MyTokenObtainPairSerializer,
@@ -198,6 +200,7 @@ class CustomTokenRefreshView(TokenRefreshView):
     auth=[]
 )
 @method_decorator(ensure_csrf_cookie, name='dispatch')
+@throttle_classes([RegisterThrottle])
 class RegisterView(APIView):
     """
     API endpoint to register a new user account using an email address.
@@ -248,13 +251,13 @@ class RegisterView(APIView):
         else:
             errors = serializer.errors
             if 'email' in errors and any("already exists" in msg for msg in errors['email']):
-                errors['email'] = [
-                    "This email is already registered. Please use a different email address."]
+                errors['email'] = ["Unable to create account. Contact support if the problem persists."]
             logger.warning(f"[Register] Registration failed: {errors}")
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
+@throttle_classes([ActivationThrottle])
 class ActivateAccountView(APIView):
     """
     Activate a user account using a 6-digit activation code.
@@ -508,6 +511,7 @@ class LogoutView(APIView):
             return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
+@throttle_classes([PasswordResetRequestThrottle])
 class PasswordResetRequestView(APIView):
     """
     PasswordResetRequestView
@@ -781,6 +785,13 @@ class AdminUserView(ModelViewSet):
     serializer_class = UserSerializer
     logger.warning(
         '[AdminUserView] Admin user management endpoint initialized.')
+    
+    # Pagination, Filtrage et Recherche
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['email', 'is_active', 'role']
+    search_fields = ['email', 'first_name', 'last_name']
+    ordering_fields = ['date_joined', 'last_name', 'role']
+    ordering = ['last_name']
 
     def perform_create(self, serializer):
         user = serializer.save(is_active=True)
