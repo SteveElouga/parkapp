@@ -428,7 +428,24 @@ class LoginView(APIView):
     tags=["Auth"],
     methods=["POST"],
     summary="Logout user and blacklist refresh token",
-    description="Logout current user by blacklisting refresh token and clearing it from cookies.",
+    description="""
+Logout the current user by blacklisting the JWT refresh token and clearing it from cookies.
+
+**Security requirements:**
+- The user must be authenticated.
+- A valid refresh token must be provided in the cookies.
+
+**Process:**
+- The view reads the 'refresh_token' cookie.
+- If present, the token is blacklisted (cannot be reused).
+- The cookie is deleted from the client.
+- Returns a success response if everything is valid.
+
+**Response codes:**
+- 205 Reset Content: Logout successful; token blacklisted, cookie deleted.
+- 400 Bad Request: No or invalid refresh token provided.
+- 500 Internal Server Error: Unexpected server-side error.
+""",
     responses={
         205: OpenApiResponse(description="Logout successful. Token blacklisted."),
         400: OpenApiResponse(description="No or invalid refresh token provided."),
@@ -438,18 +455,31 @@ class LoginView(APIView):
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class LogoutView(APIView):
     """
-    Logout a user and blacklist the refresh token.
+    API endpoint to logout a user and blacklist the JWT refresh token.
 
-    Deletes the `refresh_token` cookie and blacklists the token to prevent reuse.
+    - Reads the 'refresh_token' from cookies.
+    - Blacklists the refresh token to prevent reuse.
+    - Deletes the 'refresh_token' cookie from the client.
 
     Requirements:
         - User must be authenticated.
         - A valid refresh token must be present in cookies.
 
-    Response:
-        - 205 Reset Content: Logout successful.
+    Responses:
+        - 205 Reset Content: Logout successful; token blacklisted.
         - 400 Bad Request: No or invalid refresh token provided.
-        - 500 Internal Server Error: On unexpected error.
+        - 500 Internal Server Error: Unexpected server error.
+
+    Usage example:
+    ```
+    POST /api/logout/
+    Cookie: refresh_token=<your-token>
+    Header: Authorization: Bearer <access-token>
+    ```
+    Response:
+    {
+        "message": "Logout successful."
+    }
     """
 
     permission_classes = [IsAuthenticated]
@@ -476,7 +506,6 @@ class LogoutView(APIView):
         except Exception as e:
             logger.error(f"LogoutView error: {e}")
             return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @extend_schema(
     tags=["Auth"],
