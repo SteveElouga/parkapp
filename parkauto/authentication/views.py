@@ -61,15 +61,34 @@ def get_client_ip(request):
     tags=["Auth"],
     methods=["POST"],
     summary="Refresh JWT access token",
-    description=(
-        "Refresh the JWT access token using the refresh token stored in an HttpOnly cookie.\n"
-        "Requires a valid CSRF token to be sent in the 'X-CSRFToken' header.\n"
-        "If the CSRF token is missing or invalid, a 403 Forbidden response is returned."
-    ),
+    description="""
+Refresh the JWT access token using the refresh token stored in an HttpOnly cookie.
+
+**Security requirements:**
+- Requires a valid CSRF token sent in the 'X-CSRFToken' header.
+- If the CSRF token is missing or invalid, a 403 Forbidden response is returned.
+- If the refresh token is missing from cookies, a 400 Bad Request is returned.
+- If the refresh token is invalid or expired, a 401 Unauthorized is returned.
+
+**Cookie required:**
+- `refresh_token`: The JWT refresh token, stored in an HttpOnly cookie.
+
+**Header required:**
+- `X-CSRFToken`: The CSRF token. Must match the value sent by the server.
+
+**Response:**
+- 200 OK: New JWT access token and (optionally) a new refresh token cookie.
+- 400 Bad Request: Missing refresh token in cookies.
+- 401 Unauthorized: Invalid or expired refresh token.
+- 403 Forbidden: Missing or invalid CSRF token.
+- 500 Internal Server Error: Unhandled error (server-side).
+""",
     responses={
         200: OpenApiResponse(description="Access token refreshed successfully."),
-        403: OpenApiResponse(description="CSRF token missing or invalid."),
+        400: OpenApiResponse(description="Refresh token missing from cookies."),
         401: OpenApiResponse(description="Refresh token invalid or expired."),
+        403: OpenApiResponse(description="CSRF token missing or invalid."),
+        500: OpenApiResponse(description="Internal server error.")
     },
     request=None,
     parameters=[
@@ -87,24 +106,38 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
     Refresh JWT access token using HttpOnly cookie and CSRF protection.
 
-    This view extends the default TokenRefreshView and requires:
-    - A valid refresh token stored in an HttpOnly cookie.
-    - A valid CSRF token passed in the `X-CSRFToken` header.
+    This endpoint extends the default TokenRefreshView and requires:
+    - A valid refresh token stored in an HttpOnly cookie named 'refresh_token'.
+    - A valid CSRF token passed in the 'X-CSRFToken' header.
 
-    Returns:
-        200 OK: If the access token is successfully refreshed.
-        401 Unauthorized: If the refresh token is invalid or expired.
-        403 Forbidden: If the CSRF token is missing or invalid.
-        500 Internal Server Error: If there is an issue processing the request.
+    **Response codes:**
+    - 200 OK: Access token refreshed and new refresh token cookie set.
+    - 400 Bad Request: Refresh token missing from cookies.
+    - 401 Unauthorized: Invalid or expired refresh token.
+    - 403 Forbidden: Missing or invalid CSRF token.
+    - 500 Internal Server Error: Unhandled server error.
+
+    Usage example:
+    ```
+    POST /api/token/refresh/
+    Cookie: refresh_token=<your-token>
+    Header: X-CSRFToken: <your-csrf-token>
+    ```
+    Response:
+    {
+        "access": "<new-access-token>"
+    }
     """
 
     def post(self, request, *args, **kwargs):
-
         refresh_token = request.COOKIES.get('refresh_token', None)
 
         if not refresh_token:
             logger.warning("[Token Refresh] Missing refresh token in cookies")
-            return Response({"detail": "Refresh token not found in cookies."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Refresh token not found in cookies."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = self.get_serializer(data={"refresh": refresh_token})
         try:
@@ -130,15 +163,32 @@ class CustomTokenRefreshView(TokenRefreshView):
 
         logger.info(
             "[Token Refresh] Access token refreshed and new refresh cookie set")
-
         return response
 
 
 @extend_schema(
     tags=["Auth"],
     methods=["POST"],
-    summary="Register new user",
-    description="Register a new user by providing all required credentials.",
+    summary="Register a new user account via email",
+    description="""
+    Creates a new user account using the provided email and password, plus optional profile information.
+    No username is required or stored; the email serves as the unique identifier.
+
+    Upon successful registration:
+    - The user account is created with `is_active=False`.
+    - A 6-digit activation code is generated and stored.
+    - The activation code is sent to the user's email.
+
+    **Required fields in the request:**
+    - `email`: User's email address (unique, used as login).
+    - `password` and `password_confirm`: Passwords (must match, validated via Django security rules).
+    - Optionally: `first_name`, `last_name`, `role`, `phone_number`, `address`, `city`, `country`, `profile_picture`, `date_of_birth`.
+
+    **Responses:**
+    - `201 Created`: Registration successful; activation code sent by email.
+    - `400 Bad Request`: Validation errors (ex: email already used, passwords mismatch).
+    - `500 Internal Server Error`: Unexpected server error.
+    """,
     request=RegisterSerializer,
     responses={
         201: OpenApiResponse(description="User registered successfully."),
@@ -150,19 +200,23 @@ class CustomTokenRefreshView(TokenRefreshView):
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class RegisterView(APIView):
     """
-    Register a new user account.
+    API endpoint to register a new user account using an email address.
 
-    Creates a user account with `is_active=False` and generates a 6-digit activation code.
-    The activation code is stored and can later be used to activate the account.
+    - The user account is created with `is_active=False`.
+    - A 6-digit activation code is generated and stored for future account activation.
+    - The activation code is sent to the provided email address.
 
-    Request:
-        - Email, password, and other required registration fields.
+    **Request payload must include:**
+    - `email` (string, required): Used as the unique user identifier.
+    - `password` and `password_confirm` (string, required): Passwords must match and comply with security rules.
+    - Optional profile fields: `first_name`, `last_name`, `role`, `phone_number`, `address`, `city`, `country`, `profile_picture`, `date_of_birth`.
 
-    Response:
-        - 201 Created: If registration is successful.
-        - 400 Bad Request: If validation fails.
-        - 500 Internal Server Error: If something goes wrong during processing.
-        - Sends an activation code to the user's email.
+    **Responses:**
+    - 201 Created: User registered successfully. Activation code sent by email.
+    - 400 Bad Request: Validation error (ex: email already used, passwords mismatch, invalid field).
+    - 500 Internal Server Error: Unexpected server error.
+
+    The username field is NOT used; registration and authentication are performed via email only.
     """
 
     permission_classes = [AllowAny]
@@ -178,9 +232,9 @@ class RegisterView(APIView):
         return user
 
     def post(self, request):
-        try:
-            serializer = RegisterSerializer(data=request.data)
-            if serializer.is_valid():
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
                 with transaction.atomic():
                     user = self.perform_create(serializer)
                 logger.info(f"[Register] New user registered: {user.email}")
@@ -188,12 +242,16 @@ class RegisterView(APIView):
                     {"message": "User registered successfully. Please check your email for the activation code."},
                     status=status.HTTP_201_CREATED
                 )
-            logger.warning(
-                f"[Register] Registration failed: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"RegisterView error: {e}")
-            return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                logger.error(f"RegisterView error: {e}")
+                return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            errors = serializer.errors
+            if 'email' in errors and any("already exists" in msg for msg in errors['email']):
+                errors['email'] = [
+                    "This email is already registered. Please use a different email address."]
+            logger.warning(f"[Register] Registration failed: {errors}")
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
@@ -331,7 +389,8 @@ class LoginView(APIView):
         serializer = MyTokenObtainPairSerializer(data=request.data)
 
         if not serializer.is_valid():
-            logger.warning(f"[Login Attempt] email={request.data.get('email')} result=FAILED ip={get_client_ip(request)} user-agent={request.META.get('HTTP_USER_AGENT')}")
+            logger.warning(
+                f"[Login Attempt] email={request.data.get('email')} result=FAILED ip={get_client_ip(request)} user-agent={request.META.get('HTTP_USER_AGENT')}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.user

@@ -54,7 +54,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = [
             'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'role', 'phone_number',
-            'address', 'city', 'country', 'profile_picture', 'date_of_birth'
+            'address', 'city', 'country', 'date_of_birth'
         ]
 
     def validate(self, data):
