@@ -52,7 +52,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'email', 'username', 'password', 'password_confirm',
+            'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'role', 'phone_number',
             'address', 'city', 'country', 'profile_picture', 'date_of_birth'
         ]
@@ -87,7 +87,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'first_name', 'last_name',
+            'id', 'email', 'first_name', 'last_name',
             'role', 'phone_number', 'address', 'city', 'country',
             'profile_picture', 'date_of_birth', 'is_active', 'date_joined'
         ]
@@ -205,7 +205,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'username', 'first_name', 'last_name',
+            'id', 'email', 'first_name', 'last_name',
             'role', 'phone_number', 'address', 'city',
             'country', 'profile_picture', 'date_of_birth'
         ]
