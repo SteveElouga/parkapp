@@ -754,7 +754,11 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        send_account_updated_email(user)
+        try:
+            send_account_updated_email(user)
+        except Exception as e:
+            logger.error(f"[UserProfileViewSet] Error sending account update email for user: {request.user.email}, Error: {repr(e)}")
+            return Response({"message": "Profile updated successfully, but failed to send email."}, status=200)
         logger.info(f"[UserProfileViewSet] Updated profile for user: {request.user.email}")
         return Response({"message": "Profile updated successfully."})
 
@@ -794,7 +798,11 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
             data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        send_password_change_email(self.get_object())
+        try:
+            send_password_change_email(self.get_object())
+        except Exception as e:
+            logger.error(f"[UserProfileViewSet] Error sending password change email for user: {request.user.email}, Error: {repr(e)}")
+            return Response({"message": "Password changed successfully, but failed to send email."}, status=200)
         logger.info(f"[UserProfileViewSet] Password changed for user: {request.user.email}")
         return Response({"message": "Password changed successfully."})
 
