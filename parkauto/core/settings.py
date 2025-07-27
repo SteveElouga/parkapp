@@ -70,6 +70,17 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '1000/day' if DEBUG else '10000/day',
+        'anon': '100/day' if DEBUG else '1000/day',
+        'password_change': '3/hour' if DEBUG else '20/hour',
+        'account_delete': '1/day' if DEBUG else '5/day',
+        'profile_photo_upload': '5/day' if DEBUG else '50/day',
+    }
 }
 
 # CORS settings
@@ -246,33 +257,3 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880 
 
-# Throttle settings
-
-if DEBUG:
-    REST_FRAMEWORK = {
-        'DEFAULT_THROTTLE_CLASSES': [
-            'rest_framework.throttling.UserRateThrottle',
-            'rest_framework.throttling.AnonRateThrottle',
-        ],
-        'DEFAULT_THROTTLE_RATES': {
-            'user': '1000/day',
-            'anon': '100/day',
-            'password_change': '3/hour',
-            'account_delete': '1/day',
-            'profile_photo_upload': '5/day',
-        }
-    }
-else:  # dev or staging
-    REST_FRAMEWORK = {
-        'DEFAULT_THROTTLE_CLASSES': [
-            'rest_framework.throttling.UserRateThrottle',
-            'rest_framework.throttling.AnonRateThrottle',
-        ],
-        'DEFAULT_THROTTLE_RATES': {
-            'user': '10000/day',
-            'anon': '1000/day',
-            'password_change': '20/hour',
-            'account_delete': '5/day',
-            'profile_photo_upload': '50/day',
-        }
-    }

@@ -341,7 +341,7 @@ class ProfilePictureSerializer(serializers.Serializer):
     - Valide la taille maximale (2 Mo) et le type MIME (doit être une image).
     - Peut être enrichi avec des contraintes de résolution ou de format.
     """
-    profile_picture = serializers.ImageField()
+    profile_picture = serializers.ImageField(help_text="Image file for profile picture (max 2MB).")
 
     def validate_profile_picture(self, value):
         """

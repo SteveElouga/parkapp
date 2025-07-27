@@ -17,7 +17,6 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import routers
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
@@ -31,6 +30,11 @@ from django.conf.urls.static import static
 
 # Create a router and register our viewsets with it
 router = routers.SimpleRouter()
+user_profile = UserProfileViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'delete': 'destroy',
+})
 
 router.register('vehicles', VehicleViewSet, basename='vehicle')
 router.register('parking-slots', ParkingSlotViewSet, basename='parking-slot')
@@ -38,7 +42,6 @@ router.register('reservations', ReservationViewSet, basename='reservation')
 router.register('reservation-tickets', ReservationTicketViewSet,
                 basename='reservation-ticket')
 router.register('users', AdminUserView, basename='users')
-router.register('profile', UserProfileViewSet, basename='profile')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -54,10 +57,19 @@ urlpatterns = [
     path("api/logout/", LogoutView.as_view(), name="logout"),
     path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/activate/', ActivateAccountView.as_view(), name='activate'),
-    path('api/password-reset-request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
-    path('api/password-reset-confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('api/password-reset-request/',
+         PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('api/password-reset-confirm/',
+         PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path("api/me/", CurrentUserView.as_view(), name="user-me"),
+    path('profile/', user_profile, name='user-profile'),
+    path('profile/change-password/',
+         UserProfileViewSet.as_view({'post': 'change_password'})),
+    path('profile/upload-photo/',
+         UserProfileViewSet.as_view({'post': 'upload_photo'})),
+    path('profile/delete-photo/', UserProfileViewSet.as_view({'delete': 'delete_photo'})),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)

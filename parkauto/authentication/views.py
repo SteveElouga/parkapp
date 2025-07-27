@@ -722,12 +722,7 @@ class AdminUserView(ModelViewSet):
     tags=["User Profile"]
 )
 @method_decorator(ensure_csrf_cookie, name='dispatch')
-class UserProfileViewSet(
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
+class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -740,6 +735,7 @@ class UserProfileViewSet(
         responses={200: ProfileSerializer, 401: OpenApiResponse(description="Authentification requise")}
     )
     def retrieve(self, request, *args, **kwargs):
+        logger.info(f"[UserProfileViewSet] Retrieving profile for user: {request.user.email}")
         serializer = self.get_serializer(self.get_object())
         return Response(serializer.data)
 
@@ -758,7 +754,8 @@ class UserProfileViewSet(
         serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        send_account_updated_email(user, settings.FRONTEND_URL)
+        send_account_updated_email(user)
+        logger.info(f"[UserProfileViewSet] Updated profile for user: {request.user.email}")
         return Response({"message": "Profile updated successfully."})
 
     @extend_schema(
@@ -777,6 +774,7 @@ class UserProfileViewSet(
             data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         self.get_object().delete()
+        logger.info(f"[UserProfileViewSet] Deleted account for user: {request.user.email}")
         return Response({"message": "Account deleted successfully."})
 
     @extend_schema(
@@ -797,11 +795,12 @@ class UserProfileViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.save()
         send_password_change_email(self.get_object())
+        logger.info(f"[UserProfileViewSet] Password changed for user: {request.user.email}")
         return Response({"message": "Password changed successfully."})
 
     @extend_schema(
         summary="Uploader la photo de profil",
-        description="Permet d'uploader une nouvelle photo de profil.",
+        description="Permet d'uploader une nouvelle photo de profil. Le champ 'profile_picture' est obligatoire.",
         request=ProfilePictureSerializer,
         responses={
             200: OpenApiResponse(description="Photo de profil uploadée"),
@@ -819,4 +818,27 @@ class UserProfileViewSet(
             user.profile_picture.delete(save=False)
         user.profile_picture = serializer.validated_data["profile_picture"]
         user.save()
+        logger.info(f"[UserProfileViewSet] Profile picture uploaded for user: {request.user.email}")
         return Response({"message": "Profile picture uploaded successfully."})
+    
+    @extend_schema(
+        summary="Supprimer la photo de profil",
+        description="Supprime la photo de profil de l'utilisateur connecté.",
+        responses={
+            200: OpenApiResponse(description="Photo supprimée"),
+            400: OpenApiResponse(description="Aucune photo à supprimer"),
+            401: OpenApiResponse(description="Authentification requise")
+        }
+    )
+    @action(detail=False, methods=["delete"], url_path="delete-photo")
+    @throttle_classes([ProfilePhotoUploadThrottle])
+    def delete_photo(self, request):
+        user = self.get_object()
+        if user.profile_picture:
+            user.profile_picture.delete(save=False)
+            user.profile_picture = None
+            user.save()
+            logger.info(f"[UserProfileViewSet] Profile picture deleted for user: {request.user.email}")
+            return Response({"message": "Profile picture deleted successfully."})
+        logger.warning(f"[UserProfileViewSet] No profile picture to delete for user: {request.user.email}")
+        return Response({"message": "No profile picture to delete."}, status=400)
