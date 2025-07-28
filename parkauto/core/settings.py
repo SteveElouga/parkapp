@@ -68,10 +68,10 @@ ANON_RATE = '100/day' if DEBUG else '1000/day'
 PASSWORD_CHANGE_RATE = '3/hour' if DEBUG else '20/hour'
 ACCOUNT_DELETE_RATE = '1/day' if DEBUG else '5/day'
 PROFILE_PHOTO_UPLOAD_RATE = '5/day' if DEBUG else '50/day'
-REGISTER_RATE = '3/hour' if DEBUG else '20/hour'
-ACTIVATION_RATE = '10/hour' if DEBUG else '100/hour'
-PASSWORD_RESET_REQUEST_RATE = '5/hour' if DEBUG else '50/hour'
-LOGIN_RATE = '10/min' if DEBUG else '100/min'
+REGISTER_RATE = '100/hour' if DEBUG else '200/hour'
+ACTIVATION_RATE = '100/hour' if DEBUG else '1000/hour'
+PASSWORD_RESET_REQUEST_RATE = '500/hour' if DEBUG else '5000/hour'
+LOGIN_RATE = '500/min' if DEBUG else '1000/min'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

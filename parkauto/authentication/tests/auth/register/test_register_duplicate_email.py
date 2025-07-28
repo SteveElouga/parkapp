@@ -8,8 +8,7 @@ def test_register_duplicate_email(api_client, user_data):
     # Crée un utilisateur avec le même email
     User.objects.create_user(
         email=user_data["email"],
-        password="SomePass456!",
-        username="existinguser"
+        password="SomePass456!"
     )
 
     url = reverse("register")

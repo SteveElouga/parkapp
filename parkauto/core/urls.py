@@ -63,10 +63,10 @@ urlpatterns = [
          PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('profile/', user_profile, name='user-profile'),
     path('profile/change-password/',
-         UserProfileViewSet.as_view({'post': 'change_password'})),
+         UserProfileViewSet.as_view({'post': 'change_password'}), name='change-password'),
     path('profile/upload-photo/',
-         UserProfileViewSet.as_view({'post': 'upload_photo'})),
-    path('profile/delete-photo/', UserProfileViewSet.as_view({'delete': 'delete_photo'})),
+         UserProfileViewSet.as_view({'post': 'upload_photo'}), name='profile-photo-upload'),
+    path('profile/delete-photo/', UserProfileViewSet.as_view({'delete': 'delete_photo'}), name='profile-photo-delete'),
     path('auth/google/', GoogleSSOLoginView.as_view(), name='google-sso-login'),
     path('auth/github/', GithubSSOLoginView.as_view(), name='github-sso-login'),
 ]

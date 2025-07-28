@@ -9,4 +9,6 @@ pytest authentication/ \
   --ds=core.settings \
   --cov=authentication \
   --cov-report=term-missing \
-  --cov-report=html
+  --cov-report=html \
+  --cov-fail-under=80 \
+  -W always

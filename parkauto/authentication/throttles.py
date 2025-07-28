@@ -1,7 +1,7 @@
 from rest_framework.throttling import UserRateThrottle
 
 class LoginThrottle(UserRateThrottle):
-    rate = '5/min'
+    scope = 'login'
 
 class PasswordChangeThrottle(UserRateThrottle):
     scope = 'password_change'

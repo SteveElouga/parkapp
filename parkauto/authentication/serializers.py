@@ -217,6 +217,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     """
 
     profile_picture = serializers.ImageField(read_only=True)
+    email = serializers.EmailField(read_only=True)
 
     class Meta:
         model = User
@@ -240,8 +241,10 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """
-        Updates user profile fields except profile picture.
+        Updates user profile fields except profile picture and email.
         """
+        validated_data.pop('email', None)  # Ignore toute tentative de modification de l'email
+        validated_data.pop('profile_picture', None)  # Juste pour plus de robustesse
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()

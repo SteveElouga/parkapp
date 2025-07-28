@@ -826,7 +826,7 @@ class PasswordResetRequestView(APIView):
         if serializer.is_valid():
             email = serializer.validated_data['email']
             user_qs = User.objects.filter(email=email)
-            if user_qs.exists():
+            if user_qs.exists() and user_qs.get().is_active:
                 user = user_qs.first()
                 try:
                     reset_token = PasswordResetToken.objects.create(user=user)
@@ -840,7 +840,7 @@ class PasswordResetRequestView(APIView):
                     # Do not expose internal errors to user for security
             else:
                 logger.info(
-                    f"[PasswordResetRequest] Password reset requested for non-existent email: {email}")
+                    f"[PasswordResetRequest] Password reset requested for inactive email: {email}")
 
             return Response(
                 {"detail": "If that email is registered, a reset link will be sent."},
@@ -911,7 +911,7 @@ class PasswordResetConfirmView(APIView):
         request=PasswordResetConfirmSerializer,
         responses={
             200: OpenApiResponse(description="Password reset successfully."),
-            400: OpenApiResponse(description="Invalid token, expired token, or validation errors."),
+            400: OpenApiResponse(description="Invalid token, expired token, inactive user or validation errors."),
             404: OpenApiResponse(description="Reset token not found."),
             500: OpenApiResponse(description="Internal server error."),
         },
@@ -947,6 +947,14 @@ class PasswordResetConfirmView(APIView):
                         f"[PasswordResetConfirm] Expired token: {token}")
                     return Response(
                         {"detail": "Reset token has expired."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                if reset_token.user.is_active is False:
+                    logger.warning(
+                        f"[PasswordResetConfirm] Inactive user for token: {token}")
+                    return Response(
+                        {"detail": "User account is inactive."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
@@ -1029,7 +1037,7 @@ class AdminUserView(ModelViewSet):
     # Pagination, Filtrage et Recherche
     filter_backends = [DjangoFilterBackend,
                        filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['email', 'is_active', 'role']
+    filterset_fields = ['email', 'is_active', 'role', 'last_name', 'first_name']
     search_fields = ['email', 'first_name', 'last_name']
     ordering_fields = ['date_joined', 'last_name', 'role']
     ordering = ['last_name']
