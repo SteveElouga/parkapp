@@ -75,6 +75,10 @@ jobs:
       DJANGO_SETTINGS_MODULE: core.settings
       SECRET_KEY: testsecretkey
       DEBUG: 1
+      GITHUB_CLIENT_ID: ${{ secrets.CLIENT_ID_GITHUB }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET_GITHUB }}
+      GITHUB_REDIRECT_URI: http://localhost:8000/auth/github/callback/
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
