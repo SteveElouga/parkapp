@@ -59,8 +59,8 @@ jobs:
       - run: |
           pip install -r requirements.txt
           until pg_isready -h localhost -p 5432; do sleep 1; done
-          python manage.py migrate
-          python manage.py test
+          chmod +x scripts/run_tests.sh
+          ./scripts/run_tests.sh
 
   build_and_push:
     runs-on: ubuntu-latest
