@@ -259,8 +259,8 @@ class GithubSSOLoginView(APIView):
             "https://github.com/login/oauth/access_token",
             headers={"Accept": "application/json"},
             data={
-                "client_id": settings.GITHUB_CLIENT_ID,
-                "client_secret": settings.GITHUB_CLIENT_SECRET,
+                "client_id": settings.CLIENT_ID_GITHUB,
+                "client_secret": settings.CLIENT_SECRET_GITHUB,
                 "code": code,
             },
             timeout=10,
