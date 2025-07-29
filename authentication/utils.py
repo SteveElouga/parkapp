@@ -1,4 +1,4 @@
-import random
+import secrets
 from django.core.mail import send_mail
 from decouple import config
 
@@ -6,7 +6,7 @@ from_email_send = config("DEFAULT_FROM_EMAIL", default="noreply@tonsite.com")
 
 
 def generate_activation_code(length=6):
-    return "".join(random.choices("0123456789", k=length))
+    return "".join(secrets.choice("0123456789") for _ in range(length))
 
 
 def clean_strings(data, fields):

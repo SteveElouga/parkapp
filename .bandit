@@ -1,0 +1,13 @@
+# .bandit
+skips: ['B101', 'B601', 'B105']   # Liste des checks à ignorer (exemple)
+exclude_dirs:
+  - tests
+  - migrations
+  - venv
+excluse_files:
+  - .venv
+  - .git
+  - .github
+  - .env
+severity: medium
+confidence: medium

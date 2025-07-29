@@ -5,11 +5,14 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model, password_validation
 from django.core.validators import RegexValidator
 from django.db import IntegrityError
+import logging
 
 from authentication.utils import clean_strings, validate_profile_picture
 
 User = get_user_model()
 password_regex = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])([^\s]{8,})$"
+
+logger = logging.getLogger("authentication")
 
 
 class ActivationSerializer(serializers.Serializer):
@@ -367,7 +370,8 @@ class ChangePasswordSerializer(serializers.Serializer):
         for token in tokens:
             try:
                 BlacklistedToken.objects.get_or_create(token=token)
-            except Exception:
+            except Exception as exc:
+                logger.warning(f"Failed to blacklist token {token}: {exc}")
                 continue
         return user
 

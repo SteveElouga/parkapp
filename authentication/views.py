@@ -263,6 +263,7 @@ class GithubSSOLoginView(APIView):
                 "client_secret": settings.GITHUB_CLIENT_SECRET,
                 "code": code,
             },
+            timeout=10,
         )
         token_data = token_resp.json()
         access_token = token_data.get("access_token")
@@ -276,6 +277,7 @@ class GithubSSOLoginView(APIView):
         user_resp = requests.get(
             "https://api.github.com/user",
             headers={"Authorization": f"token {access_token}"},
+            timeout=10,
         )
         user_data = user_resp.json()
         email = user_data.get("email")
@@ -287,6 +289,7 @@ class GithubSSOLoginView(APIView):
             email_resp = requests.get(
                 "https://api.github.com/user/emails",
                 headers={"Authorization": f"token {access_token}"},
+                timeout=10,
             )
             email_list = email_resp.json()
             email = next((e["email"] for e in email_list if e.get("primary")), None)
