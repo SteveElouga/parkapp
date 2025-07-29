@@ -59,11 +59,11 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:14
+        image: postgres:13
         env:
-          POSTGRES_DB: parking_db
-          POSTGRES_USER: parking_user
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready
@@ -71,13 +71,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgres://parking_user:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/parking_db
+      DATABASE_URL: postgres://test_user:test_password@localhost:5432/test_db
       DJANGO_SETTINGS_MODULE: core.settings
       SECRET_KEY: testsecretkey
       DEBUG: 1
       GITHUB_CLIENT_ID: ${{ secrets.CLIENT_ID_GITHUB }}
       GITHUB_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET_GITHUB }}
-      GITHUB_REDIRECT_URI: http://localhost:8000/auth/github/callback/
 
     steps:
       - uses: actions/checkout@v3
