@@ -5,6 +5,7 @@ from authentication.models import ActivationCode
 from datetime import timedelta
 from django.utils import timezone
 
+
 @pytest.mark.django_db
 def test_activate_code_expired(api_client, user):
     activation = ActivationCode.objects.create(user=user, code="123458")

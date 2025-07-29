@@ -1,5 +1,6 @@
 from django.middleware.csrf import CsrfViewMiddleware
 
+
 class CustomCSRFMiddleware:
     """
     Middleware global qui applique la protection CSRF
@@ -20,4 +21,6 @@ class CustomCSRFMiddleware:
 
     def process_view(self, request, callback, callback_args, callback_kwargs):
         # Délègue la vérification CSRF à CsrfViewMiddleware
-        return self.csrf_middleware.process_view(request, callback, callback_args, callback_kwargs)
+        return self.csrf_middleware.process_view(
+            request, callback, callback_args, callback_kwargs
+        )

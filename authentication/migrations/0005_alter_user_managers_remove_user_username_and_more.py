@@ -6,22 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authentication', '0004_passwordresettoken'),
+        ("authentication", "0004_passwordresettoken"),
     ]
 
     operations = [
         migrations.AlterModelManagers(
-            name='user',
-            managers=[
-            ],
+            name="user",
+            managers=[],
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='username',
+            model_name="user",
+            name="username",
         ),
         migrations.AlterField(
-            model_name='user',
-            name='is_staff',
+            model_name="user",
+            name="is_staff",
             field=models.BooleanField(default=False),
         ),
     ]

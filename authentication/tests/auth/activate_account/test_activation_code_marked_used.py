@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from authentication.models import ActivationCode
 
+
 @pytest.mark.django_db
 def test_activation_code_marked_used(api_client, user):
     activation = ActivationCode.objects.create(user=user, code="123460")

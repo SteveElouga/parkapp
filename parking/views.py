@@ -7,6 +7,7 @@ from .serializers import (
     ReservationSerializer,
     ReservationTicketSerializer,
 )
+from rest_framework.response import Response
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
@@ -21,19 +22,19 @@ class ParkingSlotViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     # Example usage of @action decorator
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def custom_action(self, request, pk=None):
         slot = self.get_object()
-        return Response({'status': 'custom action executed', 'slot_id': slot.id})
+        return Response({"status": "custom action executed", "slot_id": slot.id})
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def disable(self, request, pk=None):
         slot = self.get_object()
         try:
             slot.disable()
-            return Response({'status': 'Parking slot disabled successfully'})
+            return Response({"status": "Parking slot disabled successfully"})
         except ValueError as e:
-            return Response({'error': str(e)}, status=400)
+            return Response({"error": str(e)}, status=400)
 
 
 class ReservationViewSet(viewsets.ModelViewSet):

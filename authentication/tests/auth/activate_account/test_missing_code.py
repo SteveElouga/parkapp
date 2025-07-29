@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_activate_missing_code(api_client):
     url = reverse("activate")

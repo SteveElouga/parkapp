@@ -1,4 +1,3 @@
-from django.conf import settings
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
@@ -7,11 +6,12 @@ from .models import Vehicle, ParkingSlot, Reservation, ReservationTicket
 
 User = get_user_model()
 
+
 class VehicleSerializer(serializers.ModelSerializer):
     """
     Serializer for representing and managing `Vehicle` instances.
 
-    This serializer includes full owner information in read operations 
+    This serializer includes full owner information in read operations
     and expects the owner's ID (`owner_id`) for write operations.
 
     Fields:
@@ -24,16 +24,26 @@ class VehicleSerializer(serializers.ModelSerializer):
         - color: Vehicle color.
         - created_at (read-only): Timestamp when the vehicle was registered.
     """
-    
+
     owner = UserSerializer(read_only=True)
     owner_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), source='owner', write_only=True
+        queryset=User.objects.all(), source="owner", write_only=True
     )
 
     class Meta:
         model = Vehicle
-        fields = ['id', 'owner', 'owner_id', 'plate_number', 'model', 'brand', 'color', 'created_at']
-        read_only_fields = ['id', 'owner', 'created_at']
+        fields = [
+            "id",
+            "owner",
+            "owner_id",
+            "plate_number",
+            "model",
+            "brand",
+            "color",
+            "created_at",
+        ]
+        read_only_fields = ["id", "owner", "created_at"]
+
 
 class ParkingSlotSerializer(serializers.ModelSerializer):
     """
@@ -45,17 +55,20 @@ class ParkingSlotSerializer(serializers.ModelSerializer):
         - is_available: Boolean indicating slot availability.
         - location_description: Optional description of the slot location.
     """
-    
+
     class Meta:
         model = ParkingSlot
-        fields = ['id', 'code', 'is_available', 'location_description']
-        read_only_fields = ['id']
+        fields = ["id", "code", "is_available", "location_description"]
+        read_only_fields = ["id"]
+
 
 class ReservationSerializer(serializers.ModelSerializer):
     """
-    Serializer for handling `Reservation` instances between users, vehicles, and parking slots.
+    Serializer for handling `Reservation` instances between users, vehicles, and parking
+    slots.
 
-    This serializer uses nested representations for read operations and expects corresponding IDs for write operations.
+    This serializer uses nested representations for read operations and expects
+    corresponding IDs for write operations.
 
     Fields:
         - id (read-only): Unique identifier of the reservation.
@@ -69,34 +82,42 @@ class ReservationSerializer(serializers.ModelSerializer):
         - end_time: Timestamp marking the end of the reservation.
         - created_at (read-only): Timestamp when the reservation was created.
     """
-    
+
     user = UserSerializer(read_only=True)
     user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), source='user', write_only=True
+        queryset=User.objects.all(), source="user", write_only=True
     )
     vehicle = VehicleSerializer(read_only=True)
     vehicle_id = serializers.PrimaryKeyRelatedField(
-        queryset=Vehicle.objects.all(), source='vehicle', write_only=True
+        queryset=Vehicle.objects.all(), source="vehicle", write_only=True
     )
     parking_slot = ParkingSlotSerializer(read_only=True)
     parking_slot_id = serializers.PrimaryKeyRelatedField(
-        queryset=ParkingSlot.objects.all(), source='parking_slot', write_only=True
+        queryset=ParkingSlot.objects.all(), source="parking_slot", write_only=True
     )
 
     class Meta:
         model = Reservation
         fields = [
-            'id', 'user', 'user_id', 'vehicle', 'vehicle_id',
-            'parking_slot', 'parking_slot_id',
-            'start_time', 'end_time', 'created_at'
+            "id",
+            "user",
+            "user_id",
+            "vehicle",
+            "vehicle_id",
+            "parking_slot",
+            "parking_slot_id",
+            "start_time",
+            "end_time",
+            "created_at",
         ]
-        read_only_fields = ['id', 'user', 'vehicle', 'parking_slot', 'created_at']
+        read_only_fields = ["id", "user", "vehicle", "parking_slot", "created_at"]
+
 
 class ReservationTicketSerializer(serializers.ModelSerializer):
     """
     Serializer for managing `ReservationTicket` instances linked to reservations.
 
-    This serializer includes a nested reservation for read operations and expects 
+    This serializer includes a nested reservation for read operations and expects
     the reservation ID for write operations.
 
     Fields:
@@ -110,16 +131,23 @@ class ReservationTicketSerializer(serializers.ModelSerializer):
         - validated_at: Timestamp when the ticket was validated.
         - qr_code_image (read-only): Base64 or image URL of the generated QR code.
     """
-    
+
     reservation = ReservationSerializer(read_only=True)
     reservation_id = serializers.PrimaryKeyRelatedField(
-        queryset=Reservation.objects.all(), source='reservation', write_only=True
+        queryset=Reservation.objects.all(), source="reservation", write_only=True
     )
 
     class Meta:
         model = ReservationTicket
         fields = [
-            'id', 'reservation', 'reservation_id', 'ticket_number',
-            'issued_at', 'is_paid', 'status', 'validated_at', 'qr_code_image'
+            "id",
+            "reservation",
+            "reservation_id",
+            "ticket_number",
+            "issued_at",
+            "is_paid",
+            "status",
+            "validated_at",
+            "qr_code_image",
         ]
-        read_only_fields = ['id', 'ticket_number', 'issued_at', 'qr_code_image']
+        read_only_fields = ["id", "ticket_number", "issued_at", "qr_code_image"]

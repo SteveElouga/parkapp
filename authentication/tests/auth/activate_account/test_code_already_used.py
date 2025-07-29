@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from authentication.models import ActivationCode
 
+
 @pytest.mark.django_db
 def test_activate_code_already_used(api_client, user):
     ActivationCode.objects.create(user=user, code="123457", is_used=True)

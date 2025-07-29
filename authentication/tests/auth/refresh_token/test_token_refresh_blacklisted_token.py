@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_token_refresh_blacklisted_token(api_client, blacklisted_refresh_token):
     url = reverse("token_refresh")

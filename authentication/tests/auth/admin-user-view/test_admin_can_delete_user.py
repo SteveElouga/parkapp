@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_admin_can_delete_user(api_client, admin_user, user_factory, django_user_model):
     user = user_factory(email="deleteme@example.com", password="Testpass123!")

@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.4.2  # Mets la dernière version stable ou celle que tu utilises
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0  # Mets la version que tu veux
+    hooks:
+      - id: flake8
+        additional_dependencies: []
+        exclude: '/migrations/'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.6         # Mets la dernière version stable
+    hooks:
+      - id: ruff
+        args: [--fix]

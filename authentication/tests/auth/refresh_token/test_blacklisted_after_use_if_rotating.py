@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
+
 @pytest.mark.django_db
 def test_blacklisted_after_use_if_rotating(api_client, active_user):
     url = reverse("token_refresh")

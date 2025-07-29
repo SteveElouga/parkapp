@@ -24,66 +24,66 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config(
-    'SECRET_KEY', default='django-insecure-7&shxd9kbg7$vyf56n$2%sas*ps&05hxoa4q6)_fo#0rg185)m')
+    "SECRET_KEY",
+    default="django-insecure-7&shxd9kbg7$vyf56n$2%sas*ps&05hxoa4q6)_fo#0rg185)m",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default=[], cast=list)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=[], cast=list)
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'corsheaders',
-    'rest_framework',
-    'parking',
-    'drf_spectacular',
-    'authentication',
-    'rest_framework_simplejwt.token_blacklist',
-    'django_filters',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "rest_framework",
+    "parking",
+    "drf_spectacular",
+    "authentication",
+    "rest_framework_simplejwt.token_blacklist",
+    "django_filters",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'authentication.middlewares.custom_csrf.CustomCSRFMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "authentication.middlewares.custom_csrf.CustomCSRFMiddleware",
 ]
 
-USER_RATE = '1000/day' if DEBUG else '10000/day'
-ANON_RATE = '100/day' if DEBUG else '1000/day'
-PASSWORD_CHANGE_RATE = '3/hour' if DEBUG else '20/hour'
-ACCOUNT_DELETE_RATE = '1/day' if DEBUG else '5/day'
-PROFILE_PHOTO_UPLOAD_RATE = '5/day' if DEBUG else '50/day'
-REGISTER_RATE = '100/hour' if DEBUG else '200/hour'
-ACTIVATION_RATE = '100/hour' if DEBUG else '1000/hour'
-PASSWORD_RESET_REQUEST_RATE = '500/hour' if DEBUG else '5000/hour'
-LOGIN_RATE = '500/min' if DEBUG else '1000/min'
+USER_RATE = "1000/day" if DEBUG else "10000/day"
+ANON_RATE = "100/day" if DEBUG else "1000/day"
+PASSWORD_CHANGE_RATE = "3/hour" if DEBUG else "20/hour"
+ACCOUNT_DELETE_RATE = "1/day" if DEBUG else "5/day"
+PROFILE_PHOTO_UPLOAD_RATE = "5/day" if DEBUG else "50/day"
+REGISTER_RATE = "100/hour" if DEBUG else "200/hour"
+ACTIVATION_RATE = "100/hour" if DEBUG else "1000/hour"
+PASSWORD_RESET_REQUEST_RATE = "500/hour" if DEBUG else "5000/hour"
+LOGIN_RATE = "500/min" if DEBUG else "1000/min"
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.UserRateThrottle',
-        'rest_framework.throttling.AnonRateThrottle',
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "user": USER_RATE,
@@ -96,9 +96,9 @@ REST_FRAMEWORK = {
         "password_reset_request": PASSWORD_RESET_REQUEST_RATE,
         "login": LOGIN_RATE,
     },
-    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
 }
 
 # CORS settings
@@ -109,38 +109,38 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'mydomain.com']
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "mydomain.com"]
 
 
 # JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    'ROTATE_REFRESH_TOKENS': True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+    "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_BLACKLIST_ENABLED": True,
 }
 
-ROOT_URLCONF = 'core.urls'
+ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+WSGI_APPLICATION = "core.wsgi.application"
 
 
 # Database
@@ -154,13 +154,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # }
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DB', default='parking_db'),
-        'USER': config('POSTGRES_USER', default='parking_user'),
-        'PASSWORD': config('POSTGRES_PASSWORD', default='password123'),
-        'HOST': config('POSTGRES_HOST', default='localhost'),
-        'PORT': config('POSTGRES_PORT', default='5432'),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("POSTGRES_DB", default="parking_db"),
+        "USER": config("POSTGRES_USER", default="parking_user"),
+        "PASSWORD": config("POSTGRES_PASSWORD", default="password123"),
+        "HOST": config("POSTGRES_HOST", default="localhost"),
+        "PORT": config("POSTGRES_PORT", default="5432"),
     }
 }
 
@@ -170,16 +170,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -187,9 +187,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -199,83 +199,82 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'authentication.User'
+AUTH_USER_MODEL = "authentication.User"
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'ParkAuto API',
-    'DESCRIPTION': 'API for managing the ParkAuto application',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'COMPONENT_SPLIT_REQUEST': True,
-    'SCHEMA_PATH_PREFIX': '/api/v1',
-    'SWAGGER_UI_SETTINGS': {
-        'docExpansion': 'none',
+    "TITLE": "ParkAuto API",
+    "DESCRIPTION": "API for managing the ParkAuto application",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api/v1",
+    "SWAGGER_UI_SETTINGS": {
+        "docExpansion": "none",
     },
 }
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-
-    'formatters': {
-        'verbose': {
-            'format': '{asctime} {levelname} {name} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
         },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-
-    'handlers': {
-        'file_auth': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'auth.log'),
-            'formatter': 'verbose',
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
         },
     },
-
-    'loggers': {
-        'authentication': {
-            'handlers': ['file_auth'],
-            'level': 'INFO',
-            'propagate': False,
+    "handlers": {
+        "file_auth": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "logs", "auth.log"),
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "authentication": {
+            "handlers": ["file_auth"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
 
-#email settings
-EMAIL_HOST_USER= config('EMAIL_HOST_USER', default='nyobeelouga5@gmail.com')
-EMAIL_HOST_PASSWORD= config('EMAIL_HOST_PASSWORD', default='kyxjqlusxrzxrcce')
-EMAIL_BACKEND= config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST= config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT= config('EMAIL_PORT', default=587)
-EMAIL_USE_TLS= config('EMAIL_USE_TLS', default=True)
-DEFAULT_FROM_EMAIL= config('DEFAULT_FROM_EMAIL', default='nyobeelouga5@gmail.com')
+# email settings
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="nyobeelouga5@gmail.com")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="kyxjqlusxrzxrcce")
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="nyobeelouga5@gmail.com")
 
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 
-#media files settings
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# media files settings
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
-#data upload settings
+# data upload settings
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
-DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440
 
-FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880
 
 # GitHub OAuth settings
-GITHUB_CLIENT_ID = config('GITHUB_CLIENT_ID')
-GITHUB_CLIENT_SECRET = config('GITHUB_CLIENT_SECRET')
-GITHUB_REDIRECT_URI = config('GITHUB_REDIRECT_URI')
+GITHUB_CLIENT_ID = config("GITHUB_CLIENT_ID")
+GITHUB_CLIENT_SECRET = config("GITHUB_CLIENT_SECRET")
+GITHUB_REDIRECT_URI = config("GITHUB_REDIRECT_URI")

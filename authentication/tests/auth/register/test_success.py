@@ -4,6 +4,7 @@ from rest_framework import status
 from django.core import mail
 from authentication.models import ActivationCode
 
+
 @pytest.mark.django_db
 def test_register_success(api_client, user_data):
     url = reverse("register")

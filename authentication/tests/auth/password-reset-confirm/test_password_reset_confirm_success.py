@@ -2,8 +2,11 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
-def test_password_reset_confirm_success(api_client, password_reset_token, strong_password, active_user):
+def test_password_reset_confirm_success(
+    api_client, password_reset_token, strong_password, active_user
+):
     url = reverse("password_reset_confirm")
     data = {
         "token": password_reset_token.token,

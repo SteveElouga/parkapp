@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_token_refresh_invalid_token(api_client):
     url = reverse("token_refresh")

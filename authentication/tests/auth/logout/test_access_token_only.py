@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
+
 @pytest.mark.django_db
 def test_access_token_only(api_client, active_user):
     url = reverse("logout")

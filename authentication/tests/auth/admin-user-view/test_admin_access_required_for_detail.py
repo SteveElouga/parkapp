@@ -2,8 +2,6 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from authentication.models import User
-
 
 @pytest.mark.django_db
 def test_admin_access_required_for_detail(api_client, active_user, create_lambda_user):

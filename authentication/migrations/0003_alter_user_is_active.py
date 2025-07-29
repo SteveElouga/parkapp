@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('authentication', '0002_activationcode'),
+        ("authentication", "0002_activationcode"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='is_active',
+            model_name="user",
+            name="is_active",
             field=models.BooleanField(default=False),
         ),
     ]

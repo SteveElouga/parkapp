@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from authentication.models import ActivationCode
 
+
 @pytest.mark.django_db
 def test_activate_success(api_client, user):
     activation = ActivationCode.objects.create(user=user, code="123456")

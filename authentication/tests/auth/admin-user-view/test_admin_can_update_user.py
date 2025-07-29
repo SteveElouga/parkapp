@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_admin_can_update_user(api_client, admin_user, user_factory):
     user = user_factory(email="changeme@example.com", first_name="Old")

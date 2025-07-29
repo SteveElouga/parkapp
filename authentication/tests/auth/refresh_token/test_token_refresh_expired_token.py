@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
 
+
 @pytest.mark.django_db
 def test_token_refresh_expired_token(api_client, active_user):
     url = reverse("token_refresh")

@@ -15,73 +15,154 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='ParkingSlot',
+            name="ParkingSlot",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('code', models.CharField(max_length=10, unique=True)),
-                ('is_available', models.BooleanField(default=True)),
-                ('location_description', models.CharField(blank=True, max_length=255)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("code", models.CharField(max_length=10, unique=True)),
+                ("is_available", models.BooleanField(default=True)),
+                ("location_description", models.CharField(blank=True, max_length=255)),
             ],
             options={
-                'verbose_name': 'Parking Slot',
-                'verbose_name_plural': 'Parking Slots',
-                'ordering': ['code'],
+                "verbose_name": "Parking Slot",
+                "verbose_name_plural": "Parking Slots",
+                "ordering": ["code"],
             },
         ),
         migrations.CreateModel(
-            name='Reservation',
+            name="Reservation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('start_time', models.DateTimeField()),
-                ('end_time', models.DateTimeField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('parking_slot', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='parking.parkingslot')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reservations', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("start_time", models.DateTimeField()),
+                ("end_time", models.DateTimeField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "parking_slot",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="parking.parkingslot",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="reservations",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Reservation',
-                'verbose_name_plural': 'Reservations',
-                'ordering': ['-created_at'],
+                "verbose_name": "Reservation",
+                "verbose_name_plural": "Reservations",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='ReservationTicket',
+            name="ReservationTicket",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('ticket_number', models.CharField(editable=False, max_length=100, unique=True)),
-                ('issued_at', models.DateTimeField(auto_now_add=True)),
-                ('is_paid', models.BooleanField(default=False)),
-                ('validated_at', models.DateTimeField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('generated', 'Généré'), ('paid', 'Payé'), ('used', 'Utilisé'), ('cancelled', 'Annulé')], default='generated', max_length=20)),
-                ('qr_code_image', models.ImageField(blank=True, null=True, upload_to='tickets/qrcodes/')),
-                ('reservation', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='ticket', to='parking.reservation')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "ticket_number",
+                    models.CharField(editable=False, max_length=100, unique=True),
+                ),
+                ("issued_at", models.DateTimeField(auto_now_add=True)),
+                ("is_paid", models.BooleanField(default=False)),
+                ("validated_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("generated", "Généré"),
+                            ("paid", "Payé"),
+                            ("used", "Utilisé"),
+                            ("cancelled", "Annulé"),
+                        ],
+                        default="generated",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "qr_code_image",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="tickets/qrcodes/"
+                    ),
+                ),
+                (
+                    "reservation",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ticket",
+                        to="parking.reservation",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Reservation Ticket',
-                'verbose_name_plural': 'Reservation Tickets',
-                'ordering': ['-issued_at'],
+                "verbose_name": "Reservation Ticket",
+                "verbose_name_plural": "Reservation Tickets",
+                "ordering": ["-issued_at"],
             },
         ),
         migrations.CreateModel(
-            name='Vehicle',
+            name="Vehicle",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('plate_number', models.CharField(max_length=20, unique=True)),
-                ('model', models.CharField(max_length=100)),
-                ('brand', models.CharField(max_length=100)),
-                ('color', models.CharField(max_length=50)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='vehicles', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("plate_number", models.CharField(max_length=20, unique=True)),
+                ("model", models.CharField(max_length=100)),
+                ("brand", models.CharField(max_length=100)),
+                ("color", models.CharField(max_length=50)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="vehicles",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Vehicle',
-                'verbose_name_plural': 'Vehicles',
-                'ordering': ['-created_at'],
+                "verbose_name": "Vehicle",
+                "verbose_name_plural": "Vehicles",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.AddField(
-            model_name='reservation',
-            name='vehicle',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='parking.vehicle'),
+            model_name="reservation",
+            name="vehicle",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="parking.vehicle"
+            ),
         ),
     ]

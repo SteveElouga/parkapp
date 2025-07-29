@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_email_with_spaces_and_case(api_client, user_data):
     user_data["email"] = "  NewUser@Example.COM "

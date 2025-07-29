@@ -1,8 +1,8 @@
 import pytest
 from django.urls import reverse
-from rest_framework import status
 from authentication.models import ActivationCode
 from django.core import mail
+
 
 @pytest.mark.django_db
 def test_confirmation_email_sent(api_client, user):

@@ -3,6 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
+
 @pytest.mark.django_db
 def test_token_refresh_wrong_user_refresh_token(api_client, user):
     url = reverse("token_refresh")

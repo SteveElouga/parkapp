@@ -2,16 +2,14 @@ import re
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework import serializers
 from django.contrib.auth import get_user_model, password_validation
-from django.contrib.auth.password_validation import validate_password
 from django.core.validators import RegexValidator
 from django.db import IntegrityError
 
 from authentication.utils import clean_strings, validate_profile_picture
 
 User = get_user_model()
-password_regex = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])([^\s]{8,})$'
+password_regex = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s])([^\s]{8,})$"
 
 
 class ActivationSerializer(serializers.Serializer):
@@ -23,6 +21,7 @@ class ActivationSerializer(serializers.Serializer):
     """
 
     code = serializers.CharField()
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     """
@@ -39,44 +38,62 @@ class RegisterSerializer(serializers.ModelSerializer):
     """
 
     password = serializers.CharField(
-        write_only=True, min_length=8, validators=[
+        write_only=True,
+        min_length=8,
+        validators=[
             RegexValidator(
                 regex=password_regex,
-                message="Password must include at least one uppercase letter, one lowercase letter, one digit, one special character, and must not contain spaces."
+                message="Password must include at least one uppercase letter, "
+                "one lowercase letter, one digit, one special character, "
+                "and must not contain spaces.",
             )
-        ]
+        ],
     )
     password_confirm = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
         model = User
         fields = [
-            'email', 'password', 'password_confirm',
-            'first_name', 'last_name', 'role', 'phone_number',
-            'address', 'city', 'country', 'date_of_birth'
+            "email",
+            "password",
+            "password_confirm",
+            "first_name",
+            "last_name",
+            "role",
+            "phone_number",
+            "address",
+            "city",
+            "country",
+            "date_of_birth",
         ]
 
     def validate(self, data):
-        data = clean_strings(data, ['first_name', 'last_name', 'address', 'city', 'country', 'email'])
-        if data['password'] != data['password_confirm']:
+        data = clean_strings(
+            data, ["first_name", "last_name", "address", "city", "country", "email"]
+        )
+        if data["password"] != data["password_confirm"]:
             raise serializers.ValidationError(
-                {"password_confirm": "The passwords do not match."})
+                {"password_confirm": "The passwords do not match."}
+            )
         return data
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        password = validated_data.pop('password')
-        validated_data['email'] = validated_data['email'].strip().lower()
+        validated_data.pop("password_confirm")
+        password = validated_data.pop("password")
+        validated_data["email"] = validated_data["email"].strip().lower()
         try:
             user = User(**validated_data)
             user.set_password(password)
             user.save()
         except IntegrityError:
             # Masque l’origine réelle de l’erreur
-            raise serializers.ValidationError({
-                "email": "Unable to create account. Contact support if the problem persists."
-            })
+            raise serializers.ValidationError(
+                {
+                    "email": "Unable to create account. Contact support if the problem persists."
+                }
+            )
         return user
+
 
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -94,9 +111,19 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'first_name', 'last_name',
-            'role', 'phone_number', 'address', 'city', 'country',
-            'profile_picture', 'date_of_birth', 'is_active', 'date_joined'
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "phone_number",
+            "address",
+            "city",
+            "country",
+            "profile_picture",
+            "date_of_birth",
+            "is_active",
+            "date_joined",
         ]
 
 
@@ -114,20 +141,26 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        data.update({
-            'user': {
-                'id': self.user.id,
-                'email': self.user.email,
-                'role': self.user.role,
-                'first_name': self.user.first_name or '',
-                'last_name': self.user.last_name or '',
-                'phone_number': self.user.phone_number or '',
-                'address': self.user.address or '',
-                'city': self.user.city or '',
-                'country': self.user.country or '',
-                'profile_picture': self.user.profile_picture.url if self.user.profile_picture else None,
+        data.update(
+            {
+                "user": {
+                    "id": self.user.id,
+                    "email": self.user.email,
+                    "role": self.user.role,
+                    "first_name": self.user.first_name or "",
+                    "last_name": self.user.last_name or "",
+                    "phone_number": self.user.phone_number or "",
+                    "address": self.user.address or "",
+                    "city": self.user.city or "",
+                    "country": self.user.country or "",
+                    "profile_picture": (
+                        self.user.profile_picture.url
+                        if self.user.profile_picture
+                        else None
+                    ),
+                }
             }
-        })
+        )
         return data
 
 
@@ -142,7 +175,7 @@ class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
     def validate(self, attrs):
-        self.token = attrs['refresh']
+        self.token = attrs["refresh"]
         return attrs
 
     def save(self, **kwargs):
@@ -168,7 +201,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         Vérifie que l'email est bien formaté et n'est pas déjà utilisé.
         """
         value = value.strip().lower()
-        if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', value):
+        if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", value):
             raise serializers.ValidationError("Invalid email format.")
         return value
 
@@ -184,10 +217,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     """
 
     token = serializers.UUIDField()
-    new_password = serializers.CharField(
-        min_length=8, max_length=128, write_only=True)
+    new_password = serializers.CharField(min_length=8, max_length=128, write_only=True)
     new_password_confirm = serializers.CharField(
-        min_length=8, max_length=128, write_only=True)
+        min_length=8, max_length=128, write_only=True
+    )
 
     def validate_new_password(self, value):
         if not re.match(password_regex, value):
@@ -200,11 +233,12 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         return value
 
     def validate(self, data):
-        if data['new_password'] != data['new_password_confirm']:
-            raise serializers.ValidationError({
-                "new_password_confirm": "The passwords do not match."
-            })
+        if data["new_password"] != data["new_password_confirm"]:
+            raise serializers.ValidationError(
+                {"new_password_confirm": "The passwords do not match."}
+            )
         return data
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     """
@@ -222,20 +256,30 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'first_name', 'last_name',
-            'role', 'phone_number', 'address', 'city',
-            'country', 'profile_picture', 'date_of_birth'
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "phone_number",
+            "address",
+            "city",
+            "country",
+            "profile_picture",
+            "date_of_birth",
         ]
-        read_only_fields = ['id', 'email', 'profile_picture']
-        
+        read_only_fields = ["id", "email", "profile_picture"]
+
     def validate(self, attrs):
-        return clean_strings(attrs, ['first_name', 'last_name', 'address', 'city', 'country', 'email'])
+        return clean_strings(
+            attrs, ["first_name", "last_name", "address", "city", "country", "email"]
+        )
 
     def validate_phone_number(self, value):
         """
         Verifies the format of the phone number (should be international format +XXXXXXXXXXX).
         """
-        if value and not re.match(r'^\+?\d{7,15}$', value):
+        if value and not re.match(r"^\+?\d{7,15}$", value):
             raise serializers.ValidationError("Invalid phone number format.")
         return value
 
@@ -243,12 +287,15 @@ class ProfileSerializer(serializers.ModelSerializer):
         """
         Updates user profile fields except profile picture and email.
         """
-        validated_data.pop('email', None)  # Ignore toute tentative de modification de l'email
-        validated_data.pop('profile_picture', None)  # Juste pour plus de robustesse
+        validated_data.pop(
+            "email", None
+        )  # Ignore toute tentative de modification de l'email
+        validated_data.pop("profile_picture", None)  # Juste pour plus de robustesse
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     """
@@ -259,9 +306,9 @@ class ChangePasswordSerializer(serializers.Serializer):
     - Checks matching of new password and its confirmation.
     - Blacklists previous JWT tokens after change.
     """
+
     old_password = serializers.CharField(
-        write_only=True,
-        help_text="User's current password."
+        write_only=True, help_text="User's current password."
     )
     new_password = serializers.CharField(
         write_only=True,
@@ -269,21 +316,20 @@ class ChangePasswordSerializer(serializers.Serializer):
         validators=[
             RegexValidator(
                 regex=password_regex,
-                message="Password must include at least one uppercase letter, one lowercase letter, one digit, one special character, and must not contain spaces."
+                message="Password must include at least one uppercase letter, one lowercase letter, one digit, one special character, and must not contain spaces.",
             ),
-            password_validation.validate_password
-        ]
+            password_validation.validate_password,
+        ],
     )
     confirm_new_password = serializers.CharField(
-        write_only=True,
-        help_text="Confirmation of the new password."
+        write_only=True, help_text="Confirmation of the new password."
     )
 
     def validate_old_password(self, value):
         """
         Checks that the provided old password is correct.
         """
-        user = self.context['request'].user
+        user = self.context["request"].user
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect.")
         return value
@@ -292,25 +338,31 @@ class ChangePasswordSerializer(serializers.Serializer):
         """
         Checks that new passwords match and are different from the old password.
         """
-        if attrs['new_password'] != attrs['confirm_new_password']:
-            raise serializers.ValidationError({
-                "confirm_new_password": "Passwords do not match."
-            })
-        if attrs['old_password'] == attrs['new_password']:
-            raise serializers.ValidationError({
-                "new_password": "New password must be different from the old password."
-            })
+        if attrs["new_password"] != attrs["confirm_new_password"]:
+            raise serializers.ValidationError(
+                {"confirm_new_password": "Passwords do not match."}
+            )
+        if attrs["old_password"] == attrs["new_password"]:
+            raise serializers.ValidationError(
+                {
+                    "new_password": "New password must be different from the old password."
+                }
+            )
         return attrs
 
     def save(self, **kwargs):
         """
         Updates the user's password and blacklists all previous JWT tokens.
         """
-        user = self.context['request'].user
-        user.set_password(self.validated_data['new_password'])
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
         user.save()
 
-        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+        from rest_framework_simplejwt.token_blacklist.models import (
+            BlacklistedToken,
+            OutstandingToken,
+        )
+
         tokens = OutstandingToken.objects.filter(user=user)
         for token in tokens:
             try:
@@ -319,6 +371,7 @@ class ChangePasswordSerializer(serializers.Serializer):
                 continue
         return user
 
+
 class AccountDeleteSerializer(serializers.Serializer):
     """
     Serializer for user account deletion.
@@ -326,44 +379,34 @@ class AccountDeleteSerializer(serializers.Serializer):
     - Checks the passphrase (format: <email>_delete) as strong confirmation.
     - Can be extended with password check.
     """
+
     passphrase = serializers.CharField(
         write_only=True,
-        help_text="Confirmation phrase (<email>_delete) required to delete the account."
+        help_text="Confirmation phrase (<email>_delete) required to delete the account.",
     )
 
     def validate_passphrase(self, value):
         """
         Checks that the entered passphrase matches the expected one.
         """
-        user = self.context['request'].user
+        user = self.context["request"].user
         expected = f"{user.email}_delete"
         if value != expected:
             raise serializers.ValidationError("Incorrect passphrase.")
         return value
 
+
 class ProfilePictureSerializer(serializers.Serializer):
-    """
-    Serializer for uploading user profile picture.
-
-    - Validates maximum size (2MB) and MIME type (must be an image).
-    - Can be extended with resolution or format constraints.
-    """
-    profile_picture = serializers.ImageField(
-        help_text="Image file for profile picture (max 2MB)."
-    )
-
-    def validate_profile_picture(self, value):
-        """
-        Validates the size and type of the image file.
-        """
-        return validate_profile_picture(value)
     """
     Serializer pour l'upload de la photo de profil utilisateur.
 
     - Valide la taille maximale (2 Mo) et le type MIME (doit être une image).
     - Peut être enrichi avec des contraintes de résolution ou de format.
     """
-    profile_picture = serializers.ImageField(help_text="Image file for profile picture (max 2MB).")
+
+    profile_picture = serializers.ImageField(
+        help_text="Image file for profile picture (max 2MB)."
+    )
 
     def validate_profile_picture(self, value):
         """

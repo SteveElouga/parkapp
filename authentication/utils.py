@@ -2,10 +2,12 @@ import random
 from django.core.mail import send_mail
 from decouple import config
 
-from_email_send = config('DEFAULT_FROM_EMAIL', default='noreply@tonsite.com')
+from_email_send = config("DEFAULT_FROM_EMAIL", default="noreply@tonsite.com")
+
 
 def generate_activation_code(length=6):
-    return ''.join(random.choices('0123456789', k=length))
+    return "".join(random.choices("0123456789", k=length))
+
 
 def clean_strings(data, fields):
     """
@@ -16,6 +18,7 @@ def clean_strings(data, fields):
         if field in data and isinstance(data[field], str):
             data[field] = data[field].strip()
     return data
+
 
 def send_reset_email(user, reset_link):
     subject = "Your password reset request"
@@ -34,8 +37,15 @@ def send_reset_email(user, reset_link):
     </html>
     """
     from_email = from_email_send
-    send_mail(subject, '', from_email, [
-              user.email], fail_silently=False, html_message=html_message)
+    send_mail(
+        subject,
+        "",
+        from_email,
+        [user.email],
+        fail_silently=False,
+        html_message=html_message,
+    )
+
 
 def send_confirmation_reset_password_email(user, login_url):
     subject = "Password Reset Confirmation"
@@ -52,9 +62,16 @@ def send_confirmation_reset_password_email(user, login_url):
     </body>
     </html>
     """
-    
+
     from_email = from_email_send
-    send_mail(subject, '', from_email, [user.email], fail_silently=False, html_message=html_message)
+    send_mail(
+        subject,
+        "",
+        from_email,
+        [user.email],
+        fail_silently=False,
+        html_message=html_message,
+    )
 
 
 def send_activation_email_with_code(user, activation_code):
@@ -74,8 +91,14 @@ def send_activation_email_with_code(user, activation_code):
     </html>
     """
     from_email = from_email_send
-    send_mail(subject, '', from_email, [
-              user.email], fail_silently=False, html_message=html_message)
+    send_mail(
+        subject,
+        "",
+        from_email,
+        [user.email],
+        fail_silently=False,
+        html_message=html_message,
+    )
 
 
 def send_account_activated_email(user, login_url):
@@ -96,8 +119,15 @@ def send_account_activated_email(user, login_url):
     """
 
     from_email = from_email_send
-    send_mail(subject, '', from_email, [
-              user.email], fail_silently=False, html_message=html_message)
+    send_mail(
+        subject,
+        "",
+        from_email,
+        [user.email],
+        fail_silently=False,
+        html_message=html_message,
+    )
+
 
 def send_password_change_email(user):
     subject = "Your password has been changed successfully"
@@ -114,7 +144,15 @@ def send_password_change_email(user):
     """
 
     from_email = from_email_send
-    send_mail(subject, '', from_email, [user.email], fail_silently=False, html_message=html_message)
+    send_mail(
+        subject,
+        "",
+        from_email,
+        [user.email],
+        fail_silently=False,
+        html_message=html_message,
+    )
+
 
 def send_account_updated_email(user):
     subject = "Your account has been updated successfully"
@@ -131,8 +169,16 @@ def send_account_updated_email(user):
     """
 
     from_email = from_email_send
-    send_mail(subject, '', from_email, [user.email], fail_silently=False, html_message=html_message)
-    
+    send_mail(
+        subject,
+        "",
+        from_email,
+        [user.email],
+        fail_silently=False,
+        html_message=html_message,
+    )
+
+
 def validate_profile_picture(image):
     """
     Valide l'image de profil.
@@ -145,7 +191,7 @@ def validate_profile_picture(image):
     if image.size > 2 * 1024 * 1024:
         raise Exception("Image trop volumineuse (>2 Mo).")
     # Type mime
-    if hasattr(image, 'content_type') and not image.content_type.startswith("image/"):
+    if hasattr(image, "content_type") and not image.content_type.startswith("image/"):
         raise Exception("Le fichier doit être une image.")
     # Optionnel: résolution minimale/maximale, format autorisé
     return image

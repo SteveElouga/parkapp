@@ -1,22 +1,29 @@
 from rest_framework.throttling import UserRateThrottle
 
+
 class LoginThrottle(UserRateThrottle):
-    scope = 'login'
+    scope = "login"
+
 
 class PasswordChangeThrottle(UserRateThrottle):
-    scope = 'password_change'
+    scope = "password_change"
+
 
 class AccountDeleteThrottle(UserRateThrottle):
-    scope = 'account_delete'
+    scope = "account_delete"
+
 
 class ProfilePhotoUploadThrottle(UserRateThrottle):
-    scope = 'profile_photo_upload'
+    scope = "profile_photo_upload"
+
 
 class RegisterThrottle(UserRateThrottle):
-    scope = 'register'
+    scope = "register"
+
 
 class ActivationThrottle(UserRateThrottle):
-    scope = 'activation'
+    scope = "activation"
+
 
 class PasswordResetRequestThrottle(UserRateThrottle):
-    scope = 'password_reset_request'
+    scope = "password_reset_request"

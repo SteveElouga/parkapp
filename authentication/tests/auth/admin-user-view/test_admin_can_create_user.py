@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_admin_can_create_user(api_client, admin_user):
     api_client.force_authenticate(user=admin_user)

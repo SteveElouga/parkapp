@@ -1,13 +1,18 @@
 from datetime import timedelta
 import uuid
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.utils import timezone
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError('The Email must be set')
+            raise ValueError("The Email must be set")
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -15,24 +20,25 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     # Rôles
     ROLE_CHOICES = [
-        ('client', 'Client'),
-        ('admin', 'Admin de parking'),
+        ("client", "Client"),
+        ("admin", "Admin de parking"),
     ]
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='client')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="client")
 
     # Coordonnées
     email = models.EmailField(unique=True)
@@ -44,7 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Informations personnelles
     first_name = models.CharField(max_length=30, blank=True, null=True)
     last_name = models.CharField(max_length=30, blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    profile_picture = models.ImageField(upload_to="profiles/", blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
 
     # Statut
@@ -52,7 +58,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
     objects = UserManager()
@@ -62,15 +68,16 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def update_last_login(self):
         self.last_login = timezone.now()
-        self.save(update_fields=['last_login'])
+        self.save(update_fields=["last_login"])
 
     class Meta:
-        verbose_name = 'User'
-        verbose_name_plural = 'Users'
-        ordering = ['first_name', 'last_name']
+        verbose_name = "User"
+        verbose_name_plural = "Users"
+        ordering = ["first_name", "last_name"]
+
 
 class ActivationCode(models.Model):
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    user = models.ForeignKey("User", on_delete=models.CASCADE)
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
@@ -84,7 +91,8 @@ class ActivationCode(models.Model):
 
 class PasswordResetToken(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='reset_tokens')
+        User, on_delete=models.CASCADE, related_name="reset_tokens"
+    )
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)

@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_password_reset_request_email_not_found(api_client, mailoutbox):
     url = reverse("password_reset_request")

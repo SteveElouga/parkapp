@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 @pytest.mark.django_db
 def test_email_already_exists(api_client, user_data):
     User.objects.create_user(email=user_data["email"], password="Abcdef123!")

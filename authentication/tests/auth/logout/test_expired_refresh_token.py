@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_expired_refresh_token(api_client, expired_refresh_token, active_user):
     url = reverse("logout")

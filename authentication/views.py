@@ -1,7 +1,8 @@
+import requests
+from rest_framework import mixins, viewsets, status
 import logging
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -10,56 +11,81 @@ from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter, OpenApiTypes, inline_serializer
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiResponse,
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiTypes,
+    inline_serializer,
+)
 from django.db import transaction
 
-from django.utils.decorators import method_decorator
+from rest_framework.decorators import action, throttle_classes
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 
 from authentication.models import ActivationCode, PasswordResetToken
-from authentication.throttles import AccountDeleteThrottle, ActivationThrottle, LoginThrottle, PasswordChangeThrottle, PasswordResetRequestThrottle, ProfilePhotoUploadThrottle, RegisterThrottle
-from authentication.utils import generate_activation_code, send_account_activated_email, send_account_updated_email, send_confirmation_reset_password_email, send_password_change_email, send_reset_email
+from authentication.throttles import (
+    AccountDeleteThrottle,
+    ActivationThrottle,
+    LoginThrottle,
+    PasswordChangeThrottle,
+    PasswordResetRequestThrottle,
+    ProfilePhotoUploadThrottle,
+    RegisterThrottle,
+)
+from authentication.utils import (
+    generate_activation_code,
+    send_account_activated_email,
+    send_account_updated_email,
+    send_confirmation_reset_password_email,
+    send_password_change_email,
+    send_reset_email,
+)
 from google.oauth2 import id_token
-from google.auth.transport import requests
-import requests  # Add this import for HTTP requests
 
-
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
-from rest_framework import mixins, viewsets
-from rest_framework.decorators import action, throttle_classes
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 
 from .serializers import (
-    AccountDeleteSerializer, ActivationSerializer, PasswordResetConfirmSerializer, PasswordResetRequestSerializer, ProfilePictureSerializer, RegisterSerializer, MyTokenObtainPairSerializer,
-    ProfileSerializer, ChangePasswordSerializer, UserSerializer
+    AccountDeleteSerializer,
+    ActivationSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    ProfilePictureSerializer,
+    RegisterSerializer,
+    MyTokenObtainPairSerializer,
+    ProfileSerializer,
+    ChangePasswordSerializer,
+    UserSerializer,
 )
 from rest_framework import serializers
 
 User = get_user_model()
 
-logger = logging.getLogger('authentication')
+logger = logging.getLogger("authentication")
 
 
 def set_refresh_cookie(response, token: str):
     """Set the refresh token in an HttpOnly cookie."""
     response.set_cookie(
-        key='refresh_token',
+        key="refresh_token",
         value=token,
         httponly=True,
         secure=True if settings.DEBUG else False,
-        samesite='Strict',
+        samesite="Strict",
         max_age=60 * 60 * 24 * 7,
     )
 
 
 def get_client_ip(request):
     """Get client IP address from request."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(",")[0]
     else:
-        ip = request.META.get('REMOTE_ADDR')
+        ip = request.META.get("REMOTE_ADDR")
     return ip
 
 
@@ -94,7 +120,7 @@ Refresh the JWT access token using the refresh token stored in an HttpOnly cooki
         400: OpenApiResponse(description="Refresh token missing from cookies."),
         401: OpenApiResponse(description="Refresh token invalid or expired."),
         403: OpenApiResponse(description="CSRF token missing or invalid."),
-        500: OpenApiResponse(description="Internal server error.")
+        500: OpenApiResponse(description="Internal server error."),
     },
     request=None,
     parameters=[
@@ -103,11 +129,11 @@ Refresh the JWT access token using the refresh token stored in an HttpOnly cooki
             type=OpenApiTypes.STR,
             location=OpenApiParameter.HEADER,
             required=True,
-            description="CSRF token sent in the header. Required for refreshing JWT."
+            description="CSRF token sent in the header. Required for refreshing JWT.",
         )
-    ]
+    ],
 )
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class CustomTokenRefreshView(TokenRefreshView):
     """
     Refresh JWT access token using HttpOnly cookie and CSRF protection.
@@ -136,13 +162,13 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
 
     def post(self, request, *args, **kwargs):
-        refresh_token = request.COOKIES.get('refresh_token', None)
+        refresh_token = request.COOKIES.get("refresh_token", None)
 
         if not refresh_token:
             logger.warning("[Token Refresh] Missing refresh token in cookies")
             return Response(
                 {"detail": "Refresh token not found in cookies."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = self.get_serializer(data={"refresh": refresh_token})
@@ -150,59 +176,50 @@ class CustomTokenRefreshView(TokenRefreshView):
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
             logger.warning(f"[Token Refresh] {str(e)}")
-            return Response(
-                {"detail": str(e)},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
         data = serializer.validated_data
         access_token = data.get("access")
         new_refresh_token = data.get("refresh", refresh_token)
 
-        response = Response(
-            {"access": access_token},
-            status=status.HTTP_200_OK
-        )
+        response = Response({"access": access_token}, status=status.HTTP_200_OK)
 
         # Réinjecter le nouveau refresh token dans un cookie sécurisé
         set_refresh_cookie(response, new_refresh_token)
 
-        logger.info(
-            "[Token Refresh] Access token refreshed and new refresh cookie set")
+        logger.info("[Token Refresh] Access token refreshed and new refresh cookie set")
         return response
 
 
 @extend_schema(
-    tags=['Auth'],
-    summary='Authenticate or register user via GitHub SSO',
-    description="""Authentifie ou crée un utilisateur via SSO GitHub.  
-    Le frontend envoie le code d’autorisation GitHub (OAuth2) en POST.  
+    tags=["Auth"],
+    summary="Authenticate or register user via GitHub SSO",
+    description="""Authentifie ou crée un utilisateur via SSO GitHub.
+    Le frontend envoie le code d’autorisation GitHub (OAuth2) en POST.
     Le backend échange ce code contre un access_token, récupère l’email GitHub, crée ou connecte l’utilisateur, et retourne des tokens JWT.""",
     request=inline_serializer(
-        name='GithubSSOLoginRequest',
-        fields={
-            'code': serializers.CharField(help_text="Code d'autorisation GitHub")
-        }
+        name="GithubSSOLoginRequest",
+        fields={"code": serializers.CharField(help_text="Code d'autorisation GitHub")},
     ),
     responses={
         200: OpenApiResponse(
             response=inline_serializer(
-                name='GithubSSOLoginResponse',
+                name="GithubSSOLoginResponse",
                 fields={
-                    'refresh': serializers.CharField(help_text='JWT refresh token'),
-                    'access': serializers.CharField(help_text='JWT access token'),
-                }
+                    "refresh": serializers.CharField(help_text="JWT refresh token"),
+                    "access": serializers.CharField(help_text="JWT access token"),
+                },
             ),
-            description='JWT tokens pour la session API'
+            description="JWT tokens pour la session API",
         ),
         400: OpenApiResponse(
             response=inline_serializer(
-                name='GithubSSOLoginErrorResponse',
-                fields={'error': serializers.CharField()}
+                name="GithubSSOLoginErrorResponse",
+                fields={"error": serializers.CharField()},
             ),
-            description='Erreur ou code GitHub invalide'
+            description="Erreur ou code GitHub invalide",
         ),
-    }
+    },
 )
 class GithubSSOLoginView(APIView):
     """
@@ -227,69 +244,82 @@ class GithubSSOLoginView(APIView):
             "error": "Invalid code"
         }
     """
+
     permission_classes = [AllowAny]
 
     def post(self, request):
-        code = request.data.get('code')
+        code = request.data.get("code")
         if not code:
             logger.warning("[GitHub SSO Login] No code provided")
-            return Response({'error': 'No code provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         token_resp = requests.post(
             "https://github.com/login/oauth/access_token",
-            headers={'Accept': 'application/json'},
+            headers={"Accept": "application/json"},
             data={
-                'client_id': settings.GITHUB_CLIENT_ID,
-                'client_secret': settings.GITHUB_CLIENT_SECRET,
-                'code': code,
-            }
+                "client_id": settings.GITHUB_CLIENT_ID,
+                "client_secret": settings.GITHUB_CLIENT_SECRET,
+                "code": code,
+            },
         )
         token_data = token_resp.json()
-        access_token = token_data.get('access_token')
+        access_token = token_data.get("access_token")
         if not access_token:
             logger.warning("[GitHub SSO Login] Invalid code")
-            return Response({'error': 'Invalid code'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid code"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         # 2. Récupère infos utilisateur chez GitHub
         user_resp = requests.get(
             "https://api.github.com/user",
-            headers={'Authorization': f'token {access_token}'}
+            headers={"Authorization": f"token {access_token}"},
         )
         user_data = user_resp.json()
-        email = user_data.get('email')
+        email = user_data.get("email")
         # Si email non public, va le chercher explicitement
         if not email:
             logger.info(
-                "[GitHub SSO Login] Email not found in user data, fetching emails")
+                "[GitHub SSO Login] Email not found in user data, fetching emails"
+            )
             email_resp = requests.get(
                 "https://api.github.com/user/emails",
-                headers={'Authorization': f'token {access_token}'}
+                headers={"Authorization": f"token {access_token}"},
             )
             email_list = email_resp.json()
-            email = next((e['email']
-                         for e in email_list if e.get('primary')), None)
-            email = next((e['email']
-                         for e in email_list if e.get('primary')), None)
+            email = next((e["email"] for e in email_list if e.get("primary")), None)
+            email = next((e["email"] for e in email_list if e.get("primary")), None)
 
         if not email:
-            return Response({'error': 'Unable to retrieve email from GitHub'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Unable to retrieve email from GitHub"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # 3. Crée ou récupère l'user local
-        user, created = User.objects.get_or_create(email=email, defaults={
-            'first_name': user_data.get('name', ''),
-            'is_active': True,
-        })
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name": user_data.get("name", ""),
+                "is_active": True,
+            },
+        )
         if not user.is_active:
             user.is_active = True
             user.save()
 
         refresh = RefreshToken.for_user(user)
         access = str(refresh.access_token)
-        response = Response({
-            "message": "Login successful.",
-            'access': access,
-            'user': MyTokenObtainPairSerializer(user).data
-        }, status=status.HTTP_200_OK)
+        response = Response(
+            {
+                "message": "Login successful.",
+                "access": access,
+                "user": MyTokenObtainPairSerializer(user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
         set_refresh_cookie(response, str(refresh))
         logger.info(f"[GitHub SSO Login] Issued tokens for user {email}")
@@ -309,30 +339,32 @@ class GithubSSOLoginView(APIView):
         and receives refresh/access tokens for API authentication.
     """,
     request=inline_serializer(
-        name='GoogleSSOLoginRequest',
+        name="GoogleSSOLoginRequest",
         fields={
-            'id_token': serializers.CharField(help_text='Google OAuth2 ID token obtained by the frontend')
-        }
+            "id_token": serializers.CharField(
+                help_text="Google OAuth2 ID token obtained by the frontend"
+            )
+        },
     ),
     responses={
         200: OpenApiResponse(
             response=inline_serializer(
-                name='GoogleSSOLoginResponse',
+                name="GoogleSSOLoginResponse",
                 fields={
-                    'refresh': serializers.CharField(help_text='JWT refresh token'),
-                    'access': serializers.CharField(help_text='JWT access token'),
-                }
+                    "refresh": serializers.CharField(help_text="JWT refresh token"),
+                    "access": serializers.CharField(help_text="JWT access token"),
+                },
             ),
-            description='JWT tokens returned for authenticated session'
+            description="JWT tokens returned for authenticated session",
         ),
         400: OpenApiResponse(
             response=inline_serializer(
-                name='GoogleSSOLoginErrorResponse',
-                fields={'error': serializers.CharField()}
+                name="GoogleSSOLoginErrorResponse",
+                fields={"error": serializers.CharField()},
             ),
-            description='Invalid or missing token'
+            description="Invalid or missing token",
         ),
-    }
+    },
 )
 class GoogleSSOLoginView(APIView):
     """
@@ -367,26 +399,33 @@ class GoogleSSOLoginView(APIView):
         }
     """
 
+    from google.auth.transport import requests
+
     permission_classes = [AllowAny]
 
     def post(self, request):
-        token = request.data.get('id_token')
+        token = request.data.get("id_token")
         if not token:
             logger.warning("[Google SSO Login] No token provided")
-            return Response({'error': 'No token provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No token provided"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             idinfo = id_token.verify_oauth2_token(token, requests.Request())
-            email = idinfo['email']
-            first_name = idinfo.get('given_name', '')
-            last_name = idinfo.get('family_name', '')
+            email = idinfo["email"]
+            first_name = idinfo.get("given_name", "")
+            last_name = idinfo.get("family_name", "")
             # Si tu veux récupérer plus d'infos, adapte ici
 
-            user, created = User.objects.get_or_create(email=email, defaults={
-                'first_name': first_name,
-                'last_name': last_name,
-                'is_active': True,  # <--- Active directement le compte SSO
-            })
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "is_active": True,  # <--- Active directement le compte SSO
+                },
+            )
             # Si le user existait déjà, assure-toi qu'il est bien actif
             if not user.is_active:
                 user.is_active = True
@@ -394,19 +433,25 @@ class GoogleSSOLoginView(APIView):
 
             refresh = RefreshToken.for_user(user)
             access = str(refresh.access_token)
-            response = Response({
-                "message": "Login successful.",
-                'access': access,
-                'user': MyTokenObtainPairSerializer(user).data
-            }, status=status.HTTP_200_OK)
+            response = Response(
+                {
+                    "message": "Login successful.",
+                    "access": access,
+                    "user": MyTokenObtainPairSerializer(user).data,
+                },
+                status=status.HTTP_200_OK,
+            )
 
             set_refresh_cookie(response, str(refresh))
             logger.info(
-                f"[Google SSO Login] User {email} {'created' if created else 'logged in'} via SSO")
+                f"[Google SSO Login] User {email} {'created' if created else 'logged in'} via SSO"
+            )
             return response
         except ValueError:
             logger.warning("[Google SSO Login] Invalid token")
-            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 @extend_schema(
@@ -436,11 +481,11 @@ class GoogleSSOLoginView(APIView):
     responses={
         201: OpenApiResponse(description="User registered successfully."),
         400: OpenApiResponse(description="Validation error."),
-        500: OpenApiResponse(description="Internal server error.")
+        500: OpenApiResponse(description="Internal server error."),
     },
-    auth=[]
+    auth=[],
 )
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 @throttle_classes([RegisterThrottle])
 class RegisterView(APIView):
     """
@@ -483,22 +528,30 @@ class RegisterView(APIView):
                     user = self.perform_create(serializer)
                 logger.info(f"[Register] New user registered: {user.email}")
                 return Response(
-                    {"message": "User registered successfully. Please check your email for the activation code."},
-                    status=status.HTTP_201_CREATED
+                    {
+                        "message": "User registered successfully. Please check your email for the activation code."
+                    },
+                    status=status.HTTP_201_CREATED,
                 )
             except Exception as e:
                 logger.error(f"RegisterView error: {e}")
-                return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {"error": "Internal server error."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         else:
             errors = serializer.errors
-            if 'email' in errors and any("already exists" in msg for msg in errors['email']):
-                errors['email'] = [
-                    "Unable to create account. Contact support if the problem persists."]
+            if "email" in errors and any(
+                "already exists" in msg for msg in errors["email"]
+            ):
+                errors["email"] = [
+                    "Unable to create account. Contact support if the problem persists."
+                ]
             logger.warning(f"[Register] Registration failed: {errors}")
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 @throttle_classes([ActivationThrottle])
 class ActivateAccountView(APIView):
     """
@@ -528,7 +581,7 @@ class ActivateAccountView(APIView):
         },
         summary="Activate a user account",
         description="Activate a user account using an activation code received via email or SMS.",
-        auth=[]
+        auth=[],
     )
     def post(self, request):
         serializer = ActivationSerializer(data=request.data)
@@ -539,14 +592,17 @@ class ActivateAccountView(APIView):
             activation = ActivationCode.objects.get(code=code, is_used=False)
             user = activation.user
         except ActivationCode.DoesNotExist:
-            logger.warning(
-                f"[Activate Account] Invalid activation code: {code}")
-            return Response({"detail": "Invalid activation code."}, status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(f"[Activate Account] Invalid activation code: {code}")
+            return Response(
+                {"detail": "Invalid activation code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if activation.is_expired():
-            logger.warning(
-                f"[Activate Account] Activation code expired: {code}")
-            return Response({"detail": "The code has expired."}, status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(f"[Activate Account] Activation code expired: {code}")
+            return Response(
+                {"detail": "The code has expired."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         user.is_active = True
         user.save()
@@ -555,10 +611,11 @@ class ActivateAccountView(APIView):
         activation.save()
 
         send_account_activated_email(user, settings.FRONTEND_URL + "/login")
-        logger.info(
-            f"[Activate Account] User {user.email} activated their account.")
+        logger.info(f"[Activate Account] User {user.email} activated their account.")
 
-        return Response({"detail": "Account activated successfully."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Account activated successfully."}, status=status.HTTP_200_OK
+        )
 
 
 @extend_schema(
@@ -580,11 +637,11 @@ class ActivateAccountView(APIView):
                             "id": 1,
                             "email": "user@example.com",
                             "username": "username",
-                        }
+                        },
                     },
-                    status_codes=["200"]
+                    status_codes=["200"],
                 )
-            ]
+            ],
         ),
         400: OpenApiResponse(
             description="Bad request: Invalid data format.",
@@ -592,9 +649,9 @@ class ActivateAccountView(APIView):
                 OpenApiExample(
                     "Invalid Format",
                     value={"error": "Invalid data. Email and password are required."},
-                    status_codes=["400"]
+                    status_codes=["400"],
                 )
-            ]
+            ],
         ),
         401: OpenApiResponse(
             description="Unauthorized. Invalid credentials.",
@@ -602,14 +659,14 @@ class ActivateAccountView(APIView):
                 OpenApiExample(
                     "Invalid Credentials",
                     value={"error": "Invalid credentials."},
-                    status_codes=["401"]
+                    status_codes=["401"],
                 )
-            ]
+            ],
         ),
     },
-    auth=[]
+    auth=[],
 )
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 @throttle_classes([LoginThrottle])
 class LoginView(APIView):
     """
@@ -635,15 +692,19 @@ class LoginView(APIView):
 
         if not serializer.is_valid():
             logger.warning(
-                f"[Login Attempt] email={request.data.get('email')} result=FAILED ip={get_client_ip(request)} user-agent={request.META.get('HTTP_USER_AGENT')}")
+                f"[Login Attempt] email={request.data.get('email')} result=FAILED ip={get_client_ip(request)} user-agent={request.META.get('HTTP_USER_AGENT')}"
+            )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.user
 
         if not user.is_active:
             logger.warning(
-                f"[Login Attempt] email={user.email} result=FAILED (inactive) ip={get_client_ip(request)}")
-            return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+                f"[Login Attempt] email={user.email} result=FAILED (inactive) ip={get_client_ip(request)}"
+            )
+            return Response(
+                {"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
         try:
             refresh = RefreshToken.for_user(user)
@@ -651,22 +712,29 @@ class LoginView(APIView):
 
             user.update_last_login()
 
-            response = Response({
-                "message": "Login successful.",
-                "access_token": access,
-                "user": serializer.validated_data["user"],
-            }, status=status.HTTP_200_OK)
+            response = Response(
+                {
+                    "message": "Login successful.",
+                    "access_token": access,
+                    "user": serializer.validated_data["user"],
+                },
+                status=status.HTTP_200_OK,
+            )
 
             set_refresh_cookie(response, str(refresh))
 
             logger.info(
-                f"[Login Success] email={user.email} ip={get_client_ip(request)}")
+                f"[Login Success] email={user.email} ip={get_client_ip(request)}"
+            )
             return response
 
         except Exception as e:
             logger.error(
-                f"[Login Error] email={user.email} ip={get_client_ip(request)} error={e}")
-            return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+                f"[Login Error] email={user.email} ip={get_client_ip(request)} error={e}"
+            )
+            return Response(
+                {"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED
+            )
 
 
 @extend_schema(
@@ -694,10 +762,10 @@ Logout the current user by blacklisting the JWT refresh token and clearing it fr
     responses={
         205: OpenApiResponse(description="Logout successful. Token blacklisted."),
         400: OpenApiResponse(description="No or invalid refresh token provided."),
-        500: OpenApiResponse(description="Internal server error.")
-    }
+        500: OpenApiResponse(description="Internal server error."),
+    },
 )
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class LogoutView(APIView):
     """
     API endpoint to logout a user and blacklist the JWT refresh token.
@@ -731,29 +799,40 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            refresh_token = request.COOKIES.get('refresh_token')
+            refresh_token = request.COOKIES.get("refresh_token")
             if not refresh_token:
                 logger.warning(
-                    f"[Logout] No refresh token found in cookies for user {request.user.email}.")
-                return Response({"error": "No refresh token found."}, status=status.HTTP_400_BAD_REQUEST)
+                    f"[Logout] No refresh token found in cookies for user {request.user.email}."
+                )
+                return Response(
+                    {"error": "No refresh token found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             token = RefreshToken(refresh_token)
             token.blacklist()
 
-            response = Response({"message": "Logout successful."},
-                                status=status.HTTP_205_RESET_CONTENT)
-            response.delete_cookie('refresh_token')
+            response = Response(
+                {"message": "Logout successful."}, status=status.HTTP_205_RESET_CONTENT
+            )
+            response.delete_cookie("refresh_token")
             logger.info(
-                f"[Logout] User {request.user.email} successfully logged out and token blacklisted.")
+                f"[Logout] User {request.user.email} successfully logged out and token blacklisted."
+            )
             return response
         except TokenError:
-            return Response({"error": "Invalid refresh token."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid refresh token."}, status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
             logger.error(f"LogoutView error: {e}")
-            return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "Internal server error."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 @throttle_classes([PasswordResetRequestThrottle])
 class PasswordResetRequestView(APIView):
     """
@@ -791,7 +870,7 @@ class PasswordResetRequestView(APIView):
             {
                 "detail": "Internal server error."
             }
-"""
+    """
 
     permission_classes = [AllowAny]
 
@@ -805,7 +884,9 @@ class PasswordResetRequestView(APIView):
         ),
         request=PasswordResetRequestSerializer,
         responses={
-            200: OpenApiResponse(description="Password reset link sent if email exists."),
+            200: OpenApiResponse(
+                description="Password reset link sent if email exists."
+            ),
             400: OpenApiResponse(description="Validation error."),
             500: OpenApiResponse(description="Internal server error."),
         },
@@ -818,16 +899,17 @@ class PasswordResetRequestView(APIView):
             OpenApiExample(
                 "Success response example",
                 value={
-                    "detail": "If that email is registered, a reset link will be sent."},
+                    "detail": "If that email is registered, a reset link will be sent."
+                },
                 response_only=True,
             ),
         ],
-        auth=[]
+        auth=[],
     )
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
+            email = serializer.validated_data["email"]
             user_qs = User.objects.filter(email=email)
             if user_qs.exists() and user_qs.get().is_active:
                 user = user_qs.first()
@@ -836,26 +918,30 @@ class PasswordResetRequestView(APIView):
                     reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token.token}"
                     send_reset_email(user, reset_link)
                     logger.info(
-                        f"[PasswordResetRequest] Reset link sent to {user.email}")
+                        f"[PasswordResetRequest] Reset link sent to {user.email}"
+                    )
                 except Exception as e:
                     logger.error(
-                        f"[PasswordResetRequest] Error sending email to {email}: {e}")
+                        f"[PasswordResetRequest] Error sending email to {email}: {e}"
+                    )
                     # Do not expose internal errors to user for security
             else:
                 logger.info(
-                    f"[PasswordResetRequest] Password reset requested for inactive email: {email}")
+                    f"[PasswordResetRequest] Password reset requested for inactive email: {email}"
+                )
 
             return Response(
                 {"detail": "If that email is registered, a reset link will be sent."},
-                status=status.HTTP_200_OK
+                status=status.HTTP_200_OK,
             )
         else:
             logger.warning(
-                f"[PasswordResetRequest] Validation errors: {serializer.errors}")
+                f"[PasswordResetRequest] Validation errors: {serializer.errors}"
+            )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class PasswordResetConfirmView(APIView):
     """
     PasswordResetConfirmView
@@ -914,7 +1000,9 @@ class PasswordResetConfirmView(APIView):
         request=PasswordResetConfirmSerializer,
         responses={
             200: OpenApiResponse(description="Password reset successfully."),
-            400: OpenApiResponse(description="Invalid token, expired token, inactive user or validation errors."),
+            400: OpenApiResponse(
+                description="Invalid token, expired token, inactive user or validation errors."
+            ),
             404: OpenApiResponse(description="Reset token not found."),
             500: OpenApiResponse(description="Internal server error."),
         },
@@ -934,31 +1022,32 @@ class PasswordResetConfirmView(APIView):
                 response_only=True,
             ),
         ],
-        auth=[]
+        auth=[],
     )
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         if serializer.is_valid():
-            token = serializer.validated_data['token']
-            new_password = serializer.validated_data['new_password']
+            token = serializer.validated_data["token"]
+            new_password = serializer.validated_data["new_password"]
             try:
                 reset_token = get_object_or_404(
-                    PasswordResetToken, token=token, is_used=False)
+                    PasswordResetToken, token=token, is_used=False
+                )
 
                 if reset_token.is_expired():
-                    logger.warning(
-                        f"[PasswordResetConfirm] Expired token: {token}")
+                    logger.warning(f"[PasswordResetConfirm] Expired token: {token}")
                     return Response(
                         {"detail": "Reset token has expired."},
-                        status=status.HTTP_400_BAD_REQUEST
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
-                
+
                 if reset_token.user.is_active is False:
                     logger.warning(
-                        f"[PasswordResetConfirm] Inactive user for token: {token}")
+                        f"[PasswordResetConfirm] Inactive user for token: {token}"
+                    )
                     return Response(
                         {"detail": "User account is inactive."},
-                        status=status.HTTP_400_BAD_REQUEST
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
 
                 user = reset_token.user
@@ -969,23 +1058,26 @@ class PasswordResetConfirmView(APIView):
                 reset_token.save()
 
                 logger.info(
-                    f"[PasswordResetConfirm] Password reset successfully for user {user.email}")
+                    f"[PasswordResetConfirm] Password reset successfully for user {user.email}"
+                )
 
                 send_confirmation_reset_password_email(
-                    user, settings.FRONTEND_URL + "/login")
+                    user, settings.FRONTEND_URL + "/login"
+                )
                 return Response(
                     {"detail": "Password has been reset successfully."},
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_200_OK,
                 )
             except Exception as e:
                 logger.warning(f"token not found or error: {e}")
                 return Response(
                     {"detail": "Reset token not found."},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_404_NOT_FOUND,
                 )
         else:
             logger.warning(
-                f"[PasswordResetConfirm] Validation errors: {serializer.errors}")
+                f"[PasswordResetConfirm] Validation errors: {serializer.errors}"
+            )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -1012,10 +1104,10 @@ class PasswordResetConfirmView(APIView):
         200: UserSerializer,
         204: OpenApiResponse(description="User deleted successfully."),
         403: OpenApiResponse(description="Access denied."),
-        404: OpenApiResponse(description="User not found.")
-    }
+        404: OpenApiResponse(description="User not found."),
+    },
 )
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class AdminUserView(ModelViewSet):
     """
     ViewSet for administrative user management.
@@ -1034,16 +1126,18 @@ class AdminUserView(ModelViewSet):
     queryset = User.objects.all()
     permission_classes = [IsAdminUser]
     serializer_class = UserSerializer
-    logger.warning(
-        '[AdminUserView] Admin user management endpoint initialized.')
+    logger.warning("[AdminUserView] Admin user management endpoint initialized.")
 
     # Pagination, Filtrage et Recherche
-    filter_backends = [DjangoFilterBackend,
-                       filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['email', 'is_active', 'role', 'last_name', 'first_name']
-    search_fields = ['email', 'first_name', 'last_name']
-    ordering_fields = ['date_joined', 'last_name', 'role']
-    ordering = ['last_name']
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_fields = ["email", "is_active", "role", "last_name", "first_name"]
+    search_fields = ["email", "first_name", "last_name"]
+    ordering_fields = ["date_joined", "last_name", "role"]
+    ordering = ["last_name"]
 
     def perform_create(self, serializer):
         user = serializer.save(is_active=True)
@@ -1055,44 +1149,47 @@ class AdminUserView(ModelViewSet):
             serializer = RegisterSerializer(data=request.data)
             if serializer.is_valid():
                 user = self.perform_create(serializer)
-                logger.info(
-                    f"[AdminUserView] New user registered: {user.email}")
+                logger.info(f"[AdminUserView] New user registered: {user.email}")
                 return Response(
                     {"message": "User registered successfully."},
-                    status=status.HTTP_201_CREATED
+                    status=status.HTTP_201_CREATED,
                 )
-            logger.warning(
-                f"[AdminUserView] Registration failed: {serializer.errors}")
+            logger.warning(f"[AdminUserView] Registration failed: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"[AdminUserView] Registration error: {e}")
-            return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "Internal server error."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def update(self, request, *args, **kwargs):
-        logger.info(
-            f"[AdminUserView] Updating user: {kwargs.get('pk', 'Unknown')}")
+        logger.info(f"[AdminUserView] Updating user: {kwargs.get('pk', 'Unknown')}")
         return super().update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         logger.info(
-            f"[AdminUserView] Deleting user: {request.data.get('email', 'Unknown')}")
+            f"[AdminUserView] Deleting user: {request.data.get('email', 'Unknown')}"
+        )
         return super().delete(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
-        logger.info(f"[AdminUserView] Listing users")
+        logger.info("[AdminUserView] Listing users")
         return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
-        logger.info(
-            f"[AdminUserView] Retrieving user: {kwargs.get('pk', 'Unknown')}")
+        logger.info(f"[AdminUserView] Retrieving user: {kwargs.get('pk', 'Unknown')}")
         return super().retrieve(request, *args, **kwargs)
 
 
-@extend_schema(
-    tags=["User Profile"]
-)
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+@extend_schema(tags=["User Profile"])
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class UserProfileViewSet(
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
 
@@ -1102,12 +1199,15 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
     @extend_schema(
         summary="Lire le profil de l'utilisateur connecté",
         description="Retourne toutes les informations du profil de l'utilisateur authentifié.",
-        responses={200: ProfileSerializer, 401: OpenApiResponse(
-            description="Authentification requise")}
+        responses={
+            200: ProfileSerializer,
+            401: OpenApiResponse(description="Authentification requise"),
+        },
     )
     def retrieve(self, request, *args, **kwargs):
         logger.info(
-            f"[UserProfileViewSet] Retrieving profile for user: {request.user.email}")
+            f"[UserProfileViewSet] Retrieving profile for user: {request.user.email}"
+        )
         serializer = self.get_serializer(self.get_object())
         return Response(serializer.data)
 
@@ -1118,8 +1218,8 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         responses={
             200: OpenApiResponse(description="Profil mis à jour"),
             400: OpenApiResponse(description="Validation error"),
-            401: OpenApiResponse(description="Authentification requise")
-        }
+            401: OpenApiResponse(description="Authentification requise"),
+        },
     )
     def update(self, request, *args, **kwargs):
         user = self.get_object()
@@ -1130,10 +1230,15 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
             send_account_updated_email(user)
         except Exception as e:
             logger.error(
-                f"[UserProfileViewSet] Error sending account update email for user: {request.user.email}, Error: {repr(e)}")
-            return Response({"message": "Profile updated successfully, but failed to send email."}, status=200)
+                f"[UserProfileViewSet] Error sending account update email for user: {request.user.email}, Error: {repr(e)}"
+            )
+            return Response(
+                {"message": "Profile updated successfully, but failed to send email."},
+                status=200,
+            )
         logger.info(
-            f"[UserProfileViewSet] Updated profile for user: {request.user.email}")
+            f"[UserProfileViewSet] Updated profile for user: {request.user.email}"
+        )
         return Response({"message": "Profile updated successfully."})
 
     @extend_schema(
@@ -1143,17 +1248,19 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         responses={
             200: OpenApiResponse(description="Compte supprimé"),
             400: OpenApiResponse(description="Erreur de validation"),
-            401: OpenApiResponse(description="Authentification requise")
-        }
+            401: OpenApiResponse(description="Authentification requise"),
+        },
     )
     @throttle_classes([AccountDeleteThrottle])
     def destroy(self, request, *args, **kwargs):
         serializer = AccountDeleteSerializer(
-            data=request.data, context={'request': request})
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         self.get_object().delete()
         logger.info(
-            f"[UserProfileViewSet] Deleted account for user: {request.user.email}")
+            f"[UserProfileViewSet] Deleted account for user: {request.user.email}"
+        )
         return Response({"message": "Account deleted successfully."})
 
     @extend_schema(
@@ -1163,24 +1270,30 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         responses={
             200: OpenApiResponse(description="Mot de passe changé"),
             400: OpenApiResponse(description="Erreur de validation"),
-            401: OpenApiResponse(description="Authentification requise")
-        }
+            401: OpenApiResponse(description="Authentification requise"),
+        },
     )
     @action(detail=False, methods=["post"], url_path="change-password")
     @throttle_classes([PasswordChangeThrottle])
     def change_password(self, request):
         serializer = ChangePasswordSerializer(
-            data=request.data, context={'request': request})
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         try:
             send_password_change_email(self.get_object())
         except Exception as e:
             logger.error(
-                f"[UserProfileViewSet] Error sending password change email for user: {request.user.email}, Error: {repr(e)}")
-            return Response({"message": "Password changed successfully, but failed to send email."}, status=200)
+                f"[UserProfileViewSet] Error sending password change email for user: {request.user.email}, Error: {repr(e)}"
+            )
+            return Response(
+                {"message": "Password changed successfully, but failed to send email."},
+                status=200,
+            )
         logger.info(
-            f"[UserProfileViewSet] Password changed for user: {request.user.email}")
+            f"[UserProfileViewSet] Password changed for user: {request.user.email}"
+        )
         return Response({"message": "Password changed successfully."})
 
     @extend_schema(
@@ -1190,8 +1303,8 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         responses={
             200: OpenApiResponse(description="Photo de profil uploadée"),
             400: OpenApiResponse(description="Erreur de validation"),
-            401: OpenApiResponse(description="Authentification requise")
-        }
+            401: OpenApiResponse(description="Authentification requise"),
+        },
     )
     @action(detail=False, methods=["post"], url_path="upload-photo")
     @throttle_classes([ProfilePhotoUploadThrottle])
@@ -1204,7 +1317,8 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         user.profile_picture = serializer.validated_data["profile_picture"]
         user.save()
         logger.info(
-            f"[UserProfileViewSet] Profile picture uploaded for user: {request.user.email}")
+            f"[UserProfileViewSet] Profile picture uploaded for user: {request.user.email}"
+        )
         return Response({"message": "Profile picture uploaded successfully."})
 
     @extend_schema(
@@ -1213,8 +1327,8 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
         responses={
             200: OpenApiResponse(description="Photo supprimée"),
             400: OpenApiResponse(description="Aucune photo à supprimer"),
-            401: OpenApiResponse(description="Authentification requise")
-        }
+            401: OpenApiResponse(description="Authentification requise"),
+        },
     )
     @action(detail=False, methods=["delete"], url_path="delete-photo")
     @throttle_classes([ProfilePhotoUploadThrottle])
@@ -1225,8 +1339,10 @@ class UserProfileViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mix
             user.profile_picture = None
             user.save()
             logger.info(
-                f"[UserProfileViewSet] Profile picture deleted for user: {request.user.email}")
+                f"[UserProfileViewSet] Profile picture deleted for user: {request.user.email}"
+            )
             return Response({"message": "Profile picture deleted successfully."})
         logger.warning(
-            f"[UserProfileViewSet] No profile picture to delete for user: {request.user.email}")
+            f"[UserProfileViewSet] No profile picture to delete for user: {request.user.email}"
+        )
         return Response({"message": "No profile picture to delete."}, status=400)

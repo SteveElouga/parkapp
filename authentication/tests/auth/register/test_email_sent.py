@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from django.core import mail
 
+
 @pytest.mark.django_db
 def test_email_sent(api_client, user_data):
     url = reverse("register")

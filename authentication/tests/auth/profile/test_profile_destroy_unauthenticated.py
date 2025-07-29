@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
+
 @pytest.mark.django_db
 def test_profile_destroy_unauthenticated(api_client, active_user):
     url = reverse("user-profile")
