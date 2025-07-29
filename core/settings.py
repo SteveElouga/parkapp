@@ -220,6 +220,10 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
+# Logging settings
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -237,7 +241,7 @@ LOGGING = {
         "file_auth": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": os.path.join(BASE_DIR, "logs", "auth.log"),
+            "filename": os.path.join(LOG_DIR, "auth.log"),
             "formatter": "verbose",
         },
     },
