@@ -115,6 +115,20 @@ jobs:
         run: |
           docker push $IMAGE_NAME:${{ github.sha }}
           docker push $IMAGE_NAME:latest
+      
+      # ---- Smoke Test ----
+      - name: Run Docker container for smoke test
+        run: |
+          docker run -d --name parkapp-test -p 8000:8000 $IMAGE_NAME:latest
+      - name: Wait for the application to start
+        run: |
+          sleep 10
+      - name: Smoke test - Check HTTP response
+        run: |
+          curl --fail http://localhost:8000/swagger || (docker logs parkapp-test && exit 1)
+      - name: Clean up
+        if: always()
+        run: docker rm -f parkapp-test || true
 
   deploy:
     if: github.ref == 'refs/heads/main'
