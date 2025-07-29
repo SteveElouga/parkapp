@@ -227,6 +227,7 @@ class GithubSSOLoginView(APIView):
             "error": "Invalid code"
         }
     """
+    permission_classes = [AllowAny]
 
     def post(self, request):
         code = request.data.get('code')
@@ -365,6 +366,8 @@ class GoogleSSOLoginView(APIView):
             "error": "Invalid token"
         }
     """
+
+    permission_classes = [AllowAny]
 
     def post(self, request):
         token = request.data.get('id_token')
