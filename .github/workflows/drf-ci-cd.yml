@@ -61,9 +61,9 @@ jobs:
       postgres:
         image: postgres:14
         env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: parking_db
+          POSTGRES_USER: parking_user
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready
@@ -71,7 +71,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgres://test_user:test_password@localhost:5432/test_db
+      DATABASE_URL: postgres://parking_user:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/parking_db
       DJANGO_SETTINGS_MODULE: core.settings
       SECRET_KEY: testsecretkey
       DEBUG: 1
