@@ -140,7 +140,7 @@ jobs:
         run: sleep 10
       - name: Smoke test - Check HTTP response
         run: |
-          curl --fail http://localhost:8000/swagger || (docker logs parkapp-test && exit 1)
+          curl --fail http://localhost:8000/api/docs/swagger/ || (docker logs parkapp-test && exit 1)
       - name: Clean up
         if: always()
         run: docker rm -f parkapp-test || true
