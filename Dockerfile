@@ -25,8 +25,10 @@ RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.t
 
 COPY . .
 
-# Créer le dossier logs avec les bonnes permissions (avant USER)
+# Créer les répertoires pour les logs et les médias
+# et donner les permissions appropriées
 RUN mkdir -p /app/logs && chmod 777 /app/logs
+RUN mkdir -p /app/media && chmod 777 /app/media
 
 # Collecte des fichiers statiques (si utilisé)
 RUN python manage.py collectstatic --noinput || true

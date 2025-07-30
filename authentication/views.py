@@ -1316,6 +1316,9 @@ class UserProfileViewSet(
         serializer.is_valid(raise_exception=True)
         user = self.get_object()
         if user.profile_picture:
+            logger.info(
+                f"[UserProfileViewSet] Deleting old profile picture for user: {request.user.email}"
+            )
             user.profile_picture.delete(save=False)
         user.profile_picture = serializer.validated_data["profile_picture"]
         user.save()
