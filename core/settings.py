@@ -32,6 +32,7 @@ SECRET_KEY = config(
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=[], cast=list)
+print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
 
 
 # Application definition
