@@ -71,9 +71,9 @@ jobs:
       postgres:
         image: postgres:14
         env:
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ POSTGRES_DB }}
+          POSTGRES_USER: ${{ POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ POSTGRES_PASSWORD }}
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
@@ -150,6 +150,10 @@ jobs:
             -e GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID} \
             -e GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET} \
             -e GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI} \
+            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            -e POSTGRES_HOST=localhost \
             -p 8000:8000 $IMAGE_NAME:latest
       - name: Wait for the application to start
         run: sleep 10
