@@ -32,7 +32,7 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=[], cast=list)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="").split(",")
 print("ALLOWED_HOSTS in Railway:", ALLOWED_HOSTS, flush=True)
 logging.warning("ALLOWED_HOSTS in Railway: %s", ALLOWED_HOSTS)
 print("ENV ALLOWED_HOSTS:", os.environ.get("ALLOWED_HOSTS"), flush=True)
