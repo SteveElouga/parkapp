@@ -15,6 +15,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 from decouple import config
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,18 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config(
-    "SECRET_KEY",
-    default="django-insecure-7&shxd9kbg7$vyf56n$2%sas*ps&05hxoa4q6)_fo#0rg185)m",
-)
+SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="").split(",")
-print("ALLOWED_HOSTS in Railway:", ALLOWED_HOSTS, flush=True)
-logging.warning("ALLOWED_HOSTS in Railway: %s", ALLOWED_HOSTS)
-print("ENV ALLOWED_HOSTS:", os.environ.get("ALLOWED_HOSTS"), flush=True)
 
 
 # Application definition
@@ -155,16 +150,23 @@ WSGI_APPLICATION = "core.wsgi.application"
 #     }
 # }
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("POSTGRES_DB"),
-        "USER": config("POSTGRES_USER"),
-        "PASSWORD": config("POSTGRES_PASSWORD"),
-        "HOST": config("POSTGRES_HOST", default="localhost"),
-        "PORT": config("POSTGRES_PORT", default="5432"),
+if config("DATABASE_URL", default=None):
+    # Pour Railway et la prod cloud
+    DATABASES = {"default": dj_database_url.parse(config("DATABASE_URL"))}
+else:
+    # Pour le dev local (docker-compose, tests)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("POSTGRES_DB", default="db_name"),
+            "USER": config("POSTGRES_USER", default="postgres"),
+            "PASSWORD": config("POSTGRES_PASSWORD", default="postgres"),
+            "HOST": config("POSTGRES_HOST", default="localhost"),
+            "PORT": config("POSTGRES_PORT", default="5432"),
+        }
     }
-}
+
+logging.warning("Using DATABASE_URL: %s", config("DATABASE_URL", default=None))
 
 
 # Password validation
@@ -201,6 +203,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 STATIC_URL = "static/"
 
 # Default primary key field type
