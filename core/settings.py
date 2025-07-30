@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import logging
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -32,7 +33,9 @@ SECRET_KEY = config(
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=[], cast=list)
-print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
+print("ALLOWED_HOSTS in Railway:", ALLOWED_HOSTS, flush=True)
+logging.warning("ALLOWED_HOSTS in Railway: %s", ALLOWED_HOSTS)
+print("ENV ALLOWED_HOSTS:", os.environ.get("ALLOWED_HOSTS"), flush=True)
 
 
 # Application definition
