@@ -130,6 +130,7 @@ jobs:
       POSTGRES_USER: parking_user
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_HOST: localhost
+      ALLOWED_HOSTS: 127.0.0.1,localhost,drf-api-production.up.railway.app
     steps:
       - uses: actions/checkout@v3
       - name: Log in to DockerHub
@@ -158,6 +159,7 @@ jobs:
             -e POSTGRES_USER=${POSTGRES_USER} \
             -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
             -e POSTGRES_HOST=${POSTGRES_HOST} \
+            -e ALLOWED_HOSTS=${ALLOWED_HOSTS} \
             -p 8000:8000 $IMAGE_NAME:latest
       - name: Wait for the application to start
         run: sleep 10
