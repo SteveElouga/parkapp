@@ -64,16 +64,16 @@ jobs:
       GITHUB_CLIENT_ID: ${{ secrets.CLIENT_ID_GITHUB }}
       GITHUB_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET_GITHUB }}
       GITHUB_REDIRECT_URI: http://localhost:8000/auth/github/callback/
-      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_DB: parking_db
+      POSTGRES_USER: parking_user
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
     services:
       postgres:
         image: postgres:14
         env:
-          POSTGRES_DB: ${{ POSTGRES_DB }}
-          POSTGRES_USER: ${{ POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ POSTGRES_PASSWORD }}
+          POSTGRES_DB: parking_db
+          POSTGRES_USER: parking_user
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
@@ -95,8 +95,8 @@ jobs:
           echo "GITHUB_CLIENT_ID=${{ secrets.CLIENT_ID_GITHUB }}" >> .env
           echo "GITHUB_CLIENT_SECRET=${{ secrets.CLIENT_SECRET_GITHUB }}" >> .env
           echo "GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback/" >> .env
-          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
-          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_DB=parking_db" >> .env
+          echo "POSTGRES_USER=parking_user" >> .env
           echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
           echo "POSTGRES_HOST=localhost" >> .env
       - name: Cache pip
@@ -126,6 +126,10 @@ jobs:
       GITHUB_CLIENT_ID: ${{ secrets.CLIENT_ID_GITHUB }}
       GITHUB_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET_GITHUB }}
       GITHUB_REDIRECT_URI: http://localhost:8000/auth/github/callback/
+      POSTGRES_DB: parking_db
+      POSTGRES_USER: parking_user
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_HOST: localhost
     steps:
       - uses: actions/checkout@v3
       - name: Log in to DockerHub
@@ -150,10 +154,10 @@ jobs:
             -e GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID} \
             -e GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET} \
             -e GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI} \
-            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
-            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
-            -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
-            -e POSTGRES_HOST=localhost \
+            -e POSTGRES_DB=${POSTGRES_DB} \
+            -e POSTGRES_USER=${POSTGRES_USER} \
+            -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+            -e POSTGRES_HOST=${POSTGRES_HOST} \
             -p 8000:8000 $IMAGE_NAME:latest
       - name: Wait for the application to start
         run: sleep 10
