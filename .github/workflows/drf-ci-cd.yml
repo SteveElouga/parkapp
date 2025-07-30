@@ -8,10 +8,9 @@ on:
 
 env:
   IMAGE_NAME: nyobeelouga5/drf-api
-  PYTHON_VERSION: '3.10'
+  PYTHON_VERSION: "3.10"
 
 jobs:
-
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -61,10 +60,10 @@ jobs:
       postgres:
         image: postgres:14
         env:
-          POSTGRES_DB: parking_db
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
           POSTGRES_USER: parking_user
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -123,7 +122,7 @@ jobs:
         run: |
           docker push $IMAGE_NAME:${{ github.sha }}
           docker push $IMAGE_NAME:latest
-      
+
       # ---- Smoke Test ----
       - name: Run Docker container for smoke test
         run: |
