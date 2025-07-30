@@ -109,8 +109,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "mydomain.com"]
-
 
 # JWT settings
 SIMPLE_JWT = {
