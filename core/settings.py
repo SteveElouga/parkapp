@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import logging
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -32,6 +33,9 @@ SECRET_KEY = config(
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default=[], cast=list)
+print("ALLOWED_HOSTS in Railway:", ALLOWED_HOSTS, flush=True)
+logging.warning("ALLOWED_HOSTS in Railway: %s", ALLOWED_HOSTS)
+print("ENV ALLOWED_HOSTS:", os.environ.get("ALLOWED_HOSTS"), flush=True)
 
 
 # Application definition
@@ -108,8 +112,6 @@ CORS_ALLOWED_ORIGINS = [
     "https://your-frontend-domain.com",
     "http://127.0.0.1:8000",
 ]
-
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "mydomain.com"]
 
 
 # JWT settings
@@ -269,6 +271,8 @@ FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 
 # media files settings
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+os.makedirs(MEDIA_ROOT, exist_ok=True)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 

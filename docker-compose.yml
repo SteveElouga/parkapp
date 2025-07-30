@@ -1,6 +1,20 @@
 version: "3.9"
 
 services:
+  parkapp:
+    image: nyobeelouga5/drf-api:latest
+    container_name: parking-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./media:/app/media
+      - ./logs:/app/logs
+
   postgres:
     image: postgres:15
     container_name: parking-postgres
@@ -28,4 +42,6 @@ services:
 
 volumes:
   parking_pgdata:
+    driver: local
+  media_data:
     driver: local
