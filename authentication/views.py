@@ -15,8 +15,6 @@ from drf_spectacular.utils import (
     extend_schema,
     OpenApiResponse,
     OpenApiExample,
-    OpenApiParameter,
-    OpenApiTypes,
     inline_serializer,
 )
 from django.db import transaction
@@ -123,15 +121,6 @@ Refresh the JWT access token using the refresh token stored in an HttpOnly cooki
         500: OpenApiResponse(description="Internal server error."),
     },
     request=None,
-    parameters=[
-        OpenApiParameter(
-            name="X-CSRFToken",
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.HEADER,
-            required=True,
-            description="CSRF token sent in the header. Required for refreshing JWT.",
-        )
-    ],
 )
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CustomTokenRefreshView(TokenRefreshView):
@@ -1176,6 +1165,7 @@ class AdminUserView(ModelViewSet):
         )
         return super().delete(request, *args, **kwargs)
 
+    @extend_schema(request=None)
     def list(self, request, *args, **kwargs):
         logger.info("[AdminUserView] Listing users")
         return super().list(request, *args, **kwargs)
@@ -1312,6 +1302,10 @@ class UserProfileViewSet(
     @action(detail=False, methods=["post"], url_path="upload-photo")
     @throttle_classes([ProfilePhotoUploadThrottle])
     def upload_photo(self, request):
+        print("POST:", request.POST.keys(), flush=True)
+        print("Nombre de champs POST:", len(request.POST.keys()), flush=True)
+        print("FILES:", request.FILES.keys(), flush=True)
+        print("Nombre de fichiers:", len(request.FILES.keys()), flush=True)
         serializer = ProfilePictureSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.get_object()

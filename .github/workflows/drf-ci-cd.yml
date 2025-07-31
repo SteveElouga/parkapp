@@ -116,6 +116,7 @@ jobs:
           ./scripts/run_tests.sh
 
   build_and_push:
+    if: github.ref == 'refs/heads/main'
     needs: [test]
     runs-on: ubuntu-latest
     env:
@@ -130,6 +131,7 @@ jobs:
       POSTGRES_USER: parking_user
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_HOST: localhost
+      ALLOWED_HOSTS: 127.0.0.1,localhost,drf-api-production.up.railway.app
     steps:
       - uses: actions/checkout@v3
       - name: Log in to DockerHub
@@ -158,6 +160,7 @@ jobs:
             -e POSTGRES_USER=${POSTGRES_USER} \
             -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
             -e POSTGRES_HOST=${POSTGRES_HOST} \
+            -e ALLOWED_HOSTS=${ALLOWED_HOSTS} \
             -p 8000:8000 $IMAGE_NAME:latest
       - name: Wait for the application to start
         run: sleep 10
@@ -168,16 +171,14 @@ jobs:
         if: always()
         run: docker rm -f parkapp-test || true
 
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    needs: [build_and_push]
-    steps:
-      - name: Install Railway CLI
-        run: curl -fsSL https://railway.app/install.sh | sh
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          railway login --token $RAILWAY_TOKEN
-          railway up --service ParkApp
+  # deploy:
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   needs: [build_and_push]
+  #   steps:
+  #     - name: Install Railway CLI
+  #       run: curl -fsSL https://railway.app/install.sh | sh
+  #     - name: Deploy to Railway
+  #       env:
+  #         RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  #       run: railway up --service drf-api
