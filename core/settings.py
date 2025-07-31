@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import logging
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -166,8 +165,6 @@ else:
         }
     }
 
-logging.warning("Using DATABASE_URL: %s", config("DATABASE_URL", default=None))
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -203,8 +200,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 STATIC_URL = "static/"
+print("DATA_UPLOAD_MAX_NUMBER_FIELDS =", DATA_UPLOAD_MAX_NUMBER_FIELDS, flush=True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
