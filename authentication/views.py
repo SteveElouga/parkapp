@@ -15,8 +15,6 @@ from drf_spectacular.utils import (
     extend_schema,
     OpenApiResponse,
     OpenApiExample,
-    OpenApiParameter,
-    OpenApiTypes,
     inline_serializer,
 )
 from django.db import transaction
@@ -123,15 +121,6 @@ Refresh the JWT access token using the refresh token stored in an HttpOnly cooki
         500: OpenApiResponse(description="Internal server error."),
     },
     request=None,
-    parameters=[
-        OpenApiParameter(
-            name="X-CSRFToken",
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.HEADER,
-            required=True,
-            description="CSRF token sent in the header. Required for refreshing JWT.",
-        )
-    ],
 )
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CustomTokenRefreshView(TokenRefreshView):

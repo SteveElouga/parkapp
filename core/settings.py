@@ -31,9 +31,6 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="").split(",")
-print("ALLOWED_HOSTS in Railway:", ALLOWED_HOSTS, flush=True)
-logging.warning("ALLOWED_HOSTS in Railway: %s", ALLOWED_HOSTS)
-print("ENV ALLOWED_HOSTS:", os.environ.get("ALLOWED_HOSTS"), flush=True)
 
 
 # Application definition
@@ -169,6 +166,8 @@ else:
         }
     }
 
+logging.warning("Using DATABASE_URL: %s", config("DATABASE_URL", default=None))
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -204,6 +203,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 STATIC_URL = "static/"
 
 # Default primary key field type
