@@ -1301,6 +1301,10 @@ class UserProfileViewSet(
     @action(detail=False, methods=["post"], url_path="upload-photo")
     @throttle_classes([ProfilePhotoUploadThrottle])
     def upload_photo(self, request):
+        print("POST:", request.POST.keys(), flush=True)
+        print("Nombre de champs POST:", len(request.POST.keys()), flush=True)
+        print("FILES:", request.FILES.keys(), flush=True)
+        print("Nombre de fichiers:", len(request.FILES.keys()), flush=True)
         serializer = ProfilePictureSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.get_object()
